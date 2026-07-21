@@ -47,7 +47,12 @@ const GuesserMode = (() => {
       dom.hexBox.value = ColorEngine.rgbToHex(rgb);
       setSwatch(rgb);
       colorMap.setHSV(ColorEngine.rgbToHsv(rgb));
-      maybeAutoCheck(rgb);
+      // Keystrokes are already rate-limited by human (or scripted) typing
+      // speed — nowhere near the 60fps the drag loop can produce — so the
+      // win check runs every time here, unthrottled. Skipping this on a
+      // throttle window would mean a correct final keystroke can silently
+      // fail to register a win.
+      checkWin(rgb);
     }
 
     function onHexBoxInput() {
@@ -60,7 +65,7 @@ const GuesserMode = (() => {
       dom.rgbBoxes.b.value = rgb.b;
       setSwatch(rgb);
       colorMap.setHSV(ColorEngine.rgbToHsv(rgb));
-      maybeAutoCheck(rgb);
+      checkWin(rgb);
     }
 
     function onMapChange(hsv) {
@@ -68,13 +73,17 @@ const GuesserMode = (() => {
       const rgb = ColorEngine.hsvToRgb(hsv);
       setSwatch(rgb);
       syncInputsFromRGB(rgb);
-      maybeAutoCheck(rgb);
-    }
-
-    function maybeAutoCheck(rgb) {
+      // This fires from the colorMap rAF loop while dragging — can be up to
+      // ~60/sec — so the (relatively) expensive dE2000 check is throttled
+      // here specifically, unlike the keystroke-driven checks above.
       const now = performance.now();
       if (now - lastAutoCheck < AUTO_CHECK_INTERVAL_MS) return;
       lastAutoCheck = now;
+      checkWin(rgb);
+    }
+
+    function checkWin(rgb) {
+      if (!active) return;
       const score = ColorEngine.perceptualScore(rgb, target);
       if (score >= WIN_THRESHOLD) {
         finishRound(rgb, score, hintsUsed);
