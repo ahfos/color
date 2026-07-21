@@ -16,7 +16,19 @@
 .app-header__left {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+}
+
+.app-header__logo-btn {
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: opacity var(--transition-fast);
+}
+
+.app-header__logo-btn:hover {
+  opacity: 0.65;
 }
 
 .app-header__logo {
@@ -27,25 +39,23 @@
 .back-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
   color: var(--muted);
-  padding: 0.35rem 0;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .back-link:hover {
   color: var(--fg);
+  background: var(--border-subtle);
 }
 
 .stat-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-6);
-  padding: 0 var(--space-4) var(--space-2);
+  gap: var(--space-4);
   font-size: 0.7rem;
   color: var(--muted);
   flex-wrap: wrap;
@@ -56,36 +66,12 @@
   font-weight: 600;
 }
 
-.mode-toggle {
-  display: inline-flex;
-  border: 1px solid var(--fg);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.mode-toggle__btn {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.mode-toggle__btn + .mode-toggle__btn {
-  border-left: 1px solid var(--fg);
-}
-
-.mode-toggle__btn.is-active {
-  background: var(--fg);
-  color: var(--bg);
-}
-
 .game {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--space-6);
   width: 100%;
   max-width: 26rem;
@@ -117,22 +103,25 @@
   letter-spacing: 0.02em;
 }
 
-/* ---- swatch + code input (guesser mode) ---- */
+/* ---- guess panel: big live swatch + code input (guess mode) ---- */
 
-.swatch-row {
+.guess-panel {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  justify-content: center;
+  gap: var(--space-6);
   width: 100%;
 }
 
-.swatch {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: var(--radius-md);
+.guess-panel__swatch {
+  flex-shrink: 0;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 1.5rem;
   border: 1px solid var(--border);
-  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.3);
   transition: background 60ms linear;
 }
 
@@ -140,52 +129,58 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  width: 100%;
+  gap: var(--space-3);
 }
 
+/* A light "outline" segmented control — no filled block, just the active
+   format picking up the accent color so it stays out of the way of the
+   big swatch + input next to it. */
 .code-input__toggle {
   display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.2rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-radius: 999px;
 }
 
 .code-input__toggle-btn {
-  padding: 0.35rem 0.85rem;
-  font-size: 0.65rem;
+  padding: 0.4rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--muted);
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .code-input__toggle-btn.is-active {
-  background: var(--fg);
-  color: var(--bg);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .code-input__fields {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .code-input__hash {
   font-family: var(--mono-font);
-  font-size: 1.1rem;
+  font-size: 1.8rem;
   color: var(--muted);
 }
 
 .code-input__box {
   font-family: var(--mono-font);
-  font-size: 1.1rem;
+  font-size: 1.8rem;
+  font-weight: 500;
   text-align: center;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.25rem;
-  width: 3.4rem;
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.25rem;
+  width: 4.4rem;
   background: var(--bg);
   color: var(--fg);
   transition: border-color var(--transition-fast);
@@ -205,7 +200,7 @@
 }
 
 .code-input__box--hex {
-  width: 7.5rem;
+  width: 9.5rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -631,9 +626,9 @@
     max-width: 22rem;
   }
 
-  .swatch {
-    width: 5.5rem;
-    height: 5.5rem;
+  .guess-panel__swatch {
+    width: 10rem;
+    height: 10rem;
   }
 }
 
@@ -649,6 +644,20 @@
 
   .target-display__code {
     font-size: 2rem;
+  }
+
+  .guess-panel__swatch {
+    width: 11rem;
+    height: 11rem;
+  }
+
+  .code-input__box {
+    font-size: 2.1rem;
+    width: 4.8rem;
+  }
+
+  .code-input__box--hex {
+    width: 10.5rem;
   }
 }
 

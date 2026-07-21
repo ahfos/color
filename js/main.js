@@ -13,6 +13,7 @@
     gameView: document.getElementById("gameView"),
     enterModeBtns: Array.from(document.querySelectorAll("[data-enter-mode]")),
     backToHomeBtn: document.getElementById("backToHomeBtn"),
+    headerLogoBtn: document.getElementById("headerLogoBtn"),
 
     modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
     guesserOnly: Array.from(document.querySelectorAll("[data-guesser-only]")),
@@ -229,6 +230,7 @@
   });
 
   dom.backToHomeBtn.addEventListener("click", goHome);
+  dom.headerLogoBtn.addEventListener("click", goHome);
 
   // ---- share to Instagram Story ----
 

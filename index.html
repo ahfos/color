@@ -31,12 +31,12 @@
         </div>
         <nav class="landing__levels" aria-label="Game mode">
           <button type="button" class="landing__level" data-enter-mode="guesser">
-            <span class="landing__level-title">Code&nbsp;→&nbsp;Color</span>
-            <span class="landing__level-sub">Type or drag to guess</span>
+            <span class="landing__level-title">Guess</span>
+            <span class="landing__level-sub">Type codes to find the hidden color</span>
           </button>
           <button type="button" class="landing__level" data-enter-mode="pointer">
-            <span class="landing__level-title">Color&nbsp;→&nbsp;Code</span>
-            <span class="landing__level-sub">Place the marker</span>
+            <span class="landing__level-title">Point</span>
+            <span class="landing__level-sub">Given a code, mark where it lives</span>
           </button>
         </nav>
       </div>
@@ -50,35 +50,21 @@
       <header class="app-header">
         <div class="app-header__left">
           <button type="button" class="back-link" id="backToHomeBtn" aria-label="Back to home">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
             </svg>
-            Back
           </button>
-          <img class="app-header__logo" src="assets/logo.svg" alt="COLOR" />
+          <button type="button" class="app-header__logo-btn" id="headerLogoBtn" aria-label="COLOR — back to home">
+            <img class="app-header__logo" src="assets/logo.svg" alt="" />
+          </button>
         </div>
-        <div class="mode-toggle" role="tablist" aria-label="Game mode">
-          <button
-            type="button"
-            class="mode-toggle__btn is-active"
-            data-mode="guesser"
-            role="tab"
-            aria-selected="true"
-          >
-            Code&nbsp;→&nbsp;Color
-          </button>
-          <button type="button" class="mode-toggle__btn" data-mode="pointer" role="tab" aria-selected="false">
-            Color&nbsp;→&nbsp;Code
-          </button>
+        <div class="stat-bar">
+          <span class="stat-bar__stat">Score <strong id="scoreCounter">0</strong></span>
+          <span class="stat-bar__stat">Streak <strong id="streakCounter">0</strong></span>
+          <span class="stat-bar__stat">Best <strong id="bestCounter">0</strong></span>
         </div>
       </header>
-
-      <div class="stat-bar">
-        <span class="stat-bar__stat">Score <strong id="scoreCounter">0</strong></span>
-        <span class="stat-bar__stat">Streak <strong id="streakCounter">0</strong></span>
-        <span class="stat-bar__stat">Best <strong id="bestCounter">0</strong></span>
-      </div>
 
       <main class="game" id="game">
         <div class="target-display" data-pointer-only hidden>
@@ -86,8 +72,8 @@
           <span class="target-display__code" id="pointerTargetCode">#FFFFFF</span>
         </div>
 
-        <div class="swatch-row" data-guesser-only>
-          <div class="swatch" id="liveSwatch" aria-hidden="true"></div>
+        <div class="guess-panel" data-guesser-only>
+          <div class="guess-panel__swatch" id="liveSwatch" aria-hidden="true"></div>
 
           <div class="code-input" id="codeInput">
             <div class="code-input__toggle" role="tablist" aria-label="Code format">
@@ -150,7 +136,7 @@
           </div>
         </div>
 
-        <div class="color-map" data-color-map>
+        <div class="color-map" data-color-map data-pointer-only hidden>
           <div class="color-map__sv" data-map-sv>
             <canvas data-map-sv-canvas></canvas>
             <div class="color-map__marker color-map__marker--ghost" data-map-sv-ghost hidden></div>
@@ -213,7 +199,7 @@
         </label>
         <label class="wallpaper-option">
           <input type="checkbox" id="wallpaperShowHex" />
-          Print hex code in corner
+          Print hex code, centered
         </label>
         <div class="wallpaper-card__actions">
           <button type="button" class="btn" id="wallpaperCancelBtn">Cancel</button>
