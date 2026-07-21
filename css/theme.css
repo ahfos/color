@@ -13,6 +13,15 @@
   padding: 0;
 }
 
+/* Author rules elsewhere set `display: flex` etc. on elements that are also
+   toggled via the `hidden` attribute (overlays, format-toggle fields, mode-
+   only sections). Author stylesheets beat the UA's [hidden]{display:none},
+   so without this the attribute silently does nothing. Keep it first and
+   let it win outright. */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --bg: #ffffff;
   --fg: #000000;
