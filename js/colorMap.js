@@ -269,6 +269,18 @@ const ColorMap = (() => {
     }
     window.addEventListener("resize", onResize);
 
+    /**
+     * Re-measures and redraws both canvases. Canvas dimensions are read
+     * from clientWidth/clientHeight at setup time, which are 0 for an
+     * element inside a `hidden` ancestor — so a map created while its view
+     * is hidden (e.g. the game view behind the landing page, at page load)
+     * ends up with a 0x0 canvas and renders nothing. Call this once the
+     * map's container actually becomes visible.
+     */
+    function refreshLayout() {
+      onResize();
+    }
+
     // ---- public API ----
 
     /** Sets the marker position from an HSV object. animate=false snaps instantly (e.g. new round). */
@@ -341,7 +353,7 @@ const ColorMap = (() => {
     // Initial paint
     setHSV(opts.initialHSV || { h: 0, s: 100, v: 100 }, { animate: false });
 
-    return { setHSV, getHSV, setInteractive, showGhostHSV, hideGhost, cancelInteraction, destroy };
+    return { setHSV, getHSV, setInteractive, showGhostHSV, hideGhost, cancelInteraction, refreshLayout, destroy };
   }
 
   return { create };

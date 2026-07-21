@@ -213,6 +213,10 @@
     dom.bestCounter.textContent = String(loadBestStreak(gameState.mode));
     dom.homeView.hidden = true;
     dom.gameView.hidden = false;
+    // The map's canvases measure their container at setup time, which is
+    // 0x0 while gameView is hidden (e.g. the very first entry from the
+    // landing page) — re-measure now that it's actually on screen.
+    colorMap.refreshLayout();
   }
 
   function goHome() {
