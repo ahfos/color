@@ -1,9 +1,9 @@
 /**
  * modeGuesser.js
- * "Guess" mode. Target is hidden; the player types RGB or Hex values and
- * watches a big live swatch update as they go, converging on the target by
- * feel. No color map here on purpose — this mode is purely about reading
- * codes, so the only feedback is the swatch the typed code itself produces.
+ * "Guess" mode. The big swatch shows the fixed hidden target color for the
+ * round — it never moves. The only live feedback is a ring around the code
+ * inputs themselves, echoing the color the typed code currently produces,
+ * so the player can compare it against the fixed swatch by eye.
  */
 
 const GuesserMode = (() => {
@@ -18,12 +18,15 @@ const GuesserMode = (() => {
     let hintsUsed = 0;
     let active = false;
 
-    // Two echoes of the same live color: the big swatch, and a ring around
-    // the code inputs themselves, so the numbers/letters you're typing are
-    // always framed by the color they currently produce.
-    function applyLiveColor(rgb) {
+    // The fixed target swatch — set once per round, never touched by input.
+    function applyTargetSwatch(rgb) {
+      dom.liveSwatch.style.background = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    }
+
+    // The live ring around the code inputs, echoing whatever the typed
+    // code currently produces, so it can be compared against the fixed swatch.
+    function applyLiveOutline(rgb) {
       const rgbStr = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-      dom.liveSwatch.style.background = rgbStr;
       if (dom.codeInput) dom.codeInput.style.setProperty("--live-outline", rgbStr);
     }
 
@@ -50,7 +53,7 @@ const GuesserMode = (() => {
       }
       const rgb = readRGBFromInputs();
       dom.hexBox.value = ColorEngine.rgbToHex(rgb);
-      applyLiveColor(rgb);
+      applyLiveOutline(rgb);
       checkWin(rgb);
     }
 
@@ -68,7 +71,7 @@ const GuesserMode = (() => {
       dom.rgbBoxes.r.value = rgb.r;
       dom.rgbBoxes.g.value = rgb.g;
       dom.rgbBoxes.b.value = rgb.b;
-      applyLiveColor(rgb);
+      applyLiveOutline(rgb);
       checkWin(rgb);
     }
 
@@ -118,7 +121,8 @@ const GuesserMode = (() => {
       active = true;
       dom.feedback.textContent = "Type a code to find the hidden color.";
       dom.feedback.classList.remove("pop");
-      applyLiveColor(START_RGB);
+      applyTargetSwatch(target);
+      applyLiveOutline(START_RGB);
       syncInputsFromRGB(START_RGB);
     }
 

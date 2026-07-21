@@ -161,14 +161,16 @@
 
 /* The live-color ring: --live-outline is set from JS on every keystroke
    (modeGuesser.js), so the frame around the numbers/hex always matches the
-   color they currently produce — a second, always-visible echo of the
-   swatch, right where you're typing. Falls back to a neutral border before
-   any input has happened. */
+   color the typed code currently produces. Falls back to a neutral border
+   before any input has happened. Fixed width (instead of hugging content)
+   so switching between the RGB and Hex formats never shifts the layout —
+   both sit centered inside the same-size frame. */
 .code-input__fields {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
+  width: 16.5rem;
   padding: 0.5rem 0.9rem;
   border: 2.5px solid var(--live-outline, var(--border));
   border-radius: 1.25rem;
@@ -658,6 +660,10 @@
   .guess-panel__swatch {
     width: 11rem;
     height: 11rem;
+  }
+
+  .code-input__fields {
+    width: 18rem;
   }
 
   .code-input__box {
