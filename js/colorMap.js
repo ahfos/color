@@ -327,7 +327,7 @@ const ColorMap = (() => {
     // Initial paint
     setHSV(opts.initialHSV || { h: 0, s: 100, v: 100 }, { animate: false });
 
-    return { setHSV, getHSV, setInteractive, destroy };
+    return { setHSV, getHSV, setInteractive, showGhostHSV, hideGhost, destroy };
   }
 
   return { create };
