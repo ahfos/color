@@ -17,7 +17,6 @@ const GuesserMode = (() => {
     let lastAutoCheck = 0;
     let active = false;
     let inputSource = null; // 'input' | 'map' | null — breaks the sync feedback loop
-    let guardTimer = null;
 
     function currentGuessRGB() {
       return ColorEngine.hsvToRgb(colorMap.getHSV());
@@ -41,8 +40,16 @@ const GuesserMode = (() => {
       return { r, g, b };
     }
 
-    function onRgbBoxInput() {
+    function onRgbBoxInput(e) {
       inputSource = "input";
+      // Clamp the box the user just typed in to 0-255 immediately, so what's
+      // displayed never silently disagrees with what's actually applied
+      // (typing "999" used to compute 255 everywhere else while the box
+      // kept showing "999").
+      if (e && e.target) {
+        const clamped = ColorEngine.clamp(parseInt(e.target.value, 10) || 0, 0, 255);
+        if (String(clamped) !== e.target.value) e.target.value = clamped;
+      }
       const rgb = readRGBFromInputs();
       dom.hexBox.value = ColorEngine.rgbToHex(rgb);
       setSwatch(rgb);
@@ -55,8 +62,15 @@ const GuesserMode = (() => {
       checkWin(rgb);
     }
 
-    function onHexBoxInput() {
+    function onHexBoxInput(e) {
       inputSource = "input";
+      // Strip anything that isn't a hex digit as the user types, instead of
+      // silently ignoring keystrokes until the whole string happens to be
+      // valid — cap at 6 chars to match the "RRGGBB" box.
+      if (e && e.target) {
+        const cleaned = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
+        if (cleaned !== e.target.value) e.target.value = cleaned;
+      }
       const raw = dom.hexBox.value;
       if (!ColorEngine.isValidHex(raw)) return;
       const rgb = ColorEngine.hexToRgb(raw);
@@ -156,7 +170,6 @@ const GuesserMode = (() => {
       dom.rgbBoxes.b.removeEventListener("input", onRgbBoxInput);
       dom.hexBox.removeEventListener("input", onHexBoxInput);
       dom.howCloseBtn.removeEventListener("click", onHowClose);
-      if (guardTimer) clearTimeout(guardTimer);
     }
 
     function onGrab() {

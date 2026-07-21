@@ -14,9 +14,50 @@
     <link rel="stylesheet" href="css/color.css" />
   </head>
   <body>
-    <div class="app-shell page-enter">
+    <div id="homeView" class="app-shell landing page-enter">
+      <button type="button" class="landing__share-trigger" id="shareTriggerBtn" aria-label="Share to Instagram Story">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.6" y1="10.6" x2="15.4" y2="6.4" />
+          <line x1="8.6" y1="13.4" x2="15.4" y2="17.6" />
+        </svg>
+      </button>
+
+      <div class="landing__main">
+        <div class="landing__logo">
+          <img src="assets/logo.svg" alt="COLOR" />
+        </div>
+        <nav class="landing__levels" aria-label="Game mode">
+          <button type="button" class="landing__level" data-enter-mode="guesser">
+            <span class="landing__level-title">Code&nbsp;→&nbsp;Color</span>
+            <span class="landing__level-sub">Type or drag to guess</span>
+          </button>
+          <button type="button" class="landing__level" data-enter-mode="pointer">
+            <span class="landing__level-title">Color&nbsp;→&nbsp;Code</span>
+            <span class="landing__level-sub">Place the marker</span>
+          </button>
+        </nav>
+      </div>
+
+      <footer class="landing__credit">
+        <a href="https://www.ahfos.com" target="_blank" rel="noopener noreferrer">MADE BY AHFOS</a>
+      </footer>
+    </div>
+
+    <div id="gameView" class="app-shell" hidden>
       <header class="app-header">
-        <img class="app-header__logo" src="assets/logo.svg" alt="COLOR" />
+        <div class="app-header__left">
+          <button type="button" class="back-link" id="backToHomeBtn" aria-label="Back to home">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            Back
+          </button>
+          <img class="app-header__logo" src="assets/logo.svg" alt="COLOR" />
+        </div>
         <div class="mode-toggle" role="tablist" aria-label="Game mode">
           <button
             type="button"
@@ -32,6 +73,12 @@
           </button>
         </div>
       </header>
+
+      <div class="stat-bar">
+        <span class="stat-bar__stat">Score <strong id="scoreCounter">0</strong></span>
+        <span class="stat-bar__stat">Streak <strong id="streakCounter">0</strong></span>
+        <span class="stat-bar__stat">Best <strong id="bestCounter">0</strong></span>
+      </div>
 
       <main class="game" id="game">
         <div class="target-display" data-pointer-only hidden>
@@ -128,14 +175,6 @@
 
         <p class="feedback" id="feedback" aria-live="polite"></p>
       </main>
-
-      <footer class="app-footer">
-        <span class="app-footer__stat">Score <strong id="scoreCounter">0</strong></span>
-        <span class="app-footer__stat">Streak <strong id="streakCounter">0</strong></span>
-        <a class="app-footer__credit" href="https://www.ahfos.com" target="_blank" rel="noopener noreferrer"
-          >MADE BY AHFOS</a
-        >
-      </footer>
     </div>
 
     <div class="results-overlay" id="resultsOverlay" hidden>
@@ -183,10 +222,26 @@
       </div>
     </div>
 
+    <div class="share-story" id="shareStoryOverlay" hidden>
+      <button type="button" class="share-story__backdrop" id="shareStoryBackdrop" aria-label="Close"></button>
+      <div class="share-story__panel">
+        <div class="share-story__preview">
+          <canvas id="shareStoryCanvas" class="share-story__canvas"></canvas>
+          <div class="share-story__loading" id="shareStoryLoading">Rendering…</div>
+        </div>
+        <button type="button" class="share-story__share-btn" id="shareStoryShareBtn" disabled>
+          Share to Instagram Story
+        </button>
+        <p class="share-story__status" id="shareStoryStatus" hidden></p>
+        <button type="button" class="share-story__close" id="shareStoryCloseBtn">Close</button>
+      </div>
+    </div>
+
     <script src="js/colorEngine.js"></script>
     <script src="js/sounds.js"></script>
     <script src="js/colorMap.js"></script>
     <script src="js/wallpaper.js"></script>
+    <script src="js/share.js"></script>
     <script src="js/modeGuesser.js"></script>
     <script src="js/modePointer.js"></script>
     <script src="js/main.js"></script>

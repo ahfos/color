@@ -319,6 +319,20 @@ const ColorMap = (() => {
       root.classList.toggle("color-map--locked", !flag);
     }
 
+    /**
+     * Forcibly ends any in-progress drag without moving the marker.
+     * Pointer Events use setPointerCapture(), which keeps delivering
+     * move/up events to the element that grabbed the pointer regardless of
+     * what's visually on top of it afterwards (e.g. a results modal that
+     * opens mid-drag because a round just auto-completed). Flipping these
+     * flags makes the move handlers no-op immediately, so a modal opening
+     * mid-drag can't keep silently steering the marker underneath it.
+     */
+    function cancelInteraction() {
+      state.svDragging = false;
+      state.hueDragging = false;
+    }
+
     function destroy() {
       window.removeEventListener("resize", onResize);
       if (state.rafId) cancelAnimationFrame(state.rafId);
@@ -327,7 +341,7 @@ const ColorMap = (() => {
     // Initial paint
     setHSV(opts.initialHSV || { h: 0, s: 100, v: 100 }, { animate: false });
 
-    return { setHSV, getHSV, setInteractive, showGhostHSV, hideGhost, destroy };
+    return { setHSV, getHSV, setInteractive, showGhostHSV, hideGhost, cancelInteraction, destroy };
   }
 
   return { create };

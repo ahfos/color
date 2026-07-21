@@ -1,13 +1,19 @@
 /**
  * main.js
- * Wires the shared color map, both game modes, the results screen and the
- * wallpaper export flow together.
+ * Wires the landing page, the shared color map, both game modes, the
+ * results screen, the wallpaper export flow, and the share-to-story
+ * feature together.
  */
 
 (function () {
   "use strict";
 
   const dom = {
+    homeView: document.getElementById("homeView"),
+    gameView: document.getElementById("gameView"),
+    enterModeBtns: Array.from(document.querySelectorAll("[data-enter-mode]")),
+    backToHomeBtn: document.getElementById("backToHomeBtn"),
+
     modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
     guesserOnly: Array.from(document.querySelectorAll("[data-guesser-only]")),
     pointerOnly: Array.from(document.querySelectorAll("[data-pointer-only]")),
@@ -47,9 +53,38 @@
 
     scoreCounter: document.getElementById("scoreCounter"),
     streakCounter: document.getElementById("streakCounter"),
+    bestCounter: document.getElementById("bestCounter"),
+
+    shareTriggerBtn: document.getElementById("shareTriggerBtn"),
+    shareStoryOverlay: document.getElementById("shareStoryOverlay"),
+    shareStoryBackdrop: document.getElementById("shareStoryBackdrop"),
+    shareStoryCanvas: document.getElementById("shareStoryCanvas"),
+    shareStoryLoading: document.getElementById("shareStoryLoading"),
+    shareStoryShareBtn: document.getElementById("shareStoryShareBtn"),
+    shareStoryStatus: document.getElementById("shareStoryStatus"),
+    shareStoryCloseBtn: document.getElementById("shareStoryCloseBtn"),
   };
 
+  const BEST_STREAK_PREFIX = "color-best-streak-";
+
+  function loadBestStreak(mode) {
+    try {
+      return parseInt(localStorage.getItem(BEST_STREAK_PREFIX + mode), 10) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function saveBestStreak(mode, value) {
+    try {
+      localStorage.setItem(BEST_STREAK_PREFIX + mode, String(value));
+    } catch {
+      /* private browsing / storage disabled — best streak just won't persist */
+    }
+  }
+
   const gameState = {
+    started: false,
     mode: "guesser",
     score: 0,
     streak: 0,
@@ -69,7 +104,7 @@
     onGrab: () => {
       sounds.playGrab();
       dom.mapRoot.classList.add("is-dragging");
-      if (activeController.onGrab) activeController.onGrab();
+      if (activeController && activeController.onGrab) activeController.onGrab();
     },
     onRelease: () => {
       sounds.playRelease();
@@ -90,15 +125,31 @@
 
   const guesserController = GuesserMode.create(sharedCtx);
   const pointerController = PointerMode.create(sharedCtx);
-  activeController = guesserController;
+
+  function controllerFor(mode) {
+    return mode === "guesser" ? guesserController : pointerController;
+  }
 
   function handleRoundEnd(result) {
+    // A round can auto-complete mid-drag (Guesser mode's win check fires
+    // from inside the map's rAF loop). Pointer Events keep delivering move
+    // events to whatever element called setPointerCapture() regardless of
+    // what's now on top of it, so without this a drag in progress could
+    // keep silently steering the marker underneath the results modal.
+    colorMap.cancelInteraction();
+
     gameState.lastResult = result;
     gameState.score += result.finalScore;
     if (result.finalScore >= 70) gameState.streak += 1;
     else gameState.streak = 0;
+
+    const best = Math.max(loadBestStreak(gameState.mode), gameState.streak);
+    saveBestStreak(gameState.mode, best);
+
     dom.scoreCounter.textContent = String(gameState.score);
     dom.streakCounter.textContent = String(gameState.streak);
+    dom.bestCounter.textContent = String(best);
+
     showResults(result);
   }
 
@@ -121,16 +172,22 @@
     dom.resultsOverlay.hidden = true;
   }
 
-  function switchMode(mode) {
-    if (mode === gameState.mode) return;
-    activeController.deactivate();
-    gameState.mode = mode;
-    activeController = mode === "guesser" ? guesserController : pointerController;
+  function updateModeButtons(mode) {
     dom.modeButtons.forEach((btn) => {
       btn.classList.toggle("is-active", btn.dataset.mode === mode);
       btn.setAttribute("aria-selected", String(btn.dataset.mode === mode));
     });
+  }
+
+  function switchMode(mode) {
+    if (mode === gameState.mode) return;
+    activeController.deactivate();
+    colorMap.cancelInteraction();
+    gameState.mode = mode;
+    activeController = controllerFor(mode);
+    updateModeButtons(mode);
     activeController.activate();
+    dom.bestCounter.textContent = String(loadBestStreak(mode));
   }
 
   function switchFormat(format) {
@@ -139,7 +196,89 @@
     dom.formatFields.hex.hidden = format !== "hex";
   }
 
-  // ---- event wiring ----
+  // ---- home / game navigation ----
+
+  function enterMode(mode) {
+    sounds.unlock();
+    if (!gameState.started) {
+      gameState.started = true;
+      gameState.mode = mode;
+      activeController = controllerFor(mode);
+      updateModeButtons(mode);
+      activeController.activate();
+      dom.gameView.classList.add("page-enter");
+    } else if (mode !== gameState.mode) {
+      switchMode(mode);
+    }
+    dom.bestCounter.textContent = String(loadBestStreak(gameState.mode));
+    dom.homeView.hidden = true;
+    dom.gameView.hidden = false;
+  }
+
+  function goHome() {
+    dom.gameView.hidden = true;
+    dom.homeView.hidden = false;
+  }
+
+  dom.enterModeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => enterMode(btn.dataset.enterMode));
+  });
+
+  dom.backToHomeBtn.addEventListener("click", goHome);
+
+  // ---- share to Instagram Story ----
+
+  let shareReady = false;
+  let shareBusy = false;
+
+  function openShareModal() {
+    sounds.unlock();
+    dom.shareStoryOverlay.hidden = false;
+    shareReady = false;
+    dom.shareStoryShareBtn.disabled = true;
+    dom.shareStoryStatus.hidden = true;
+    dom.shareStoryLoading.hidden = false;
+    dom.shareStoryLoading.textContent = "Rendering…";
+
+    Share.drawStoryCard(dom.shareStoryCanvas, "assets/logo.svg")
+      .then(() => {
+        shareReady = true;
+        dom.shareStoryShareBtn.disabled = false;
+        dom.shareStoryLoading.hidden = true;
+      })
+      .catch(() => {
+        dom.shareStoryLoading.textContent = "Couldn't render the preview.";
+      });
+  }
+
+  function closeShareModal() {
+    dom.shareStoryOverlay.hidden = true;
+  }
+
+  async function handleShareClick() {
+    if (!shareReady || shareBusy) return;
+    shareBusy = true;
+    dom.shareStoryShareBtn.textContent = "Preparing…";
+    dom.shareStoryStatus.hidden = true;
+    try {
+      const result = await Share.shareStoryImage(dom.shareStoryCanvas, Share.gameShareUrl());
+      dom.shareStoryStatus.textContent = result.message;
+      dom.shareStoryStatus.hidden = false;
+    } catch {
+      dom.shareStoryStatus.textContent = "Couldn't share the image — try again.";
+      dom.shareStoryStatus.hidden = false;
+    } finally {
+      shareBusy = false;
+      dom.shareStoryShareBtn.textContent = "Share to Instagram Story";
+    }
+  }
+
+  dom.shareTriggerBtn.addEventListener("click", openShareModal);
+  dom.shareStoryBackdrop.addEventListener("click", closeShareModal);
+  dom.shareStoryCloseBtn.addEventListener("click", closeShareModal);
+  dom.shareStoryShareBtn.addEventListener("click", handleShareClick);
+
+  // ---- other event wiring ----
 
   dom.modeButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -192,5 +331,4 @@
 
   // ---- boot ----
   switchFormat("rgb");
-  activeController.activate();
 })();
