@@ -18,8 +18,13 @@ const GuesserMode = (() => {
     let hintsUsed = 0;
     let active = false;
 
-    function setSwatch(rgb) {
-      dom.liveSwatch.style.background = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    // Two echoes of the same live color: the big swatch, and a ring around
+    // the code inputs themselves, so the numbers/letters you're typing are
+    // always framed by the color they currently produce.
+    function applyLiveColor(rgb) {
+      const rgbStr = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      dom.liveSwatch.style.background = rgbStr;
+      if (dom.codeInput) dom.codeInput.style.setProperty("--live-outline", rgbStr);
     }
 
     function syncInputsFromRGB(rgb) {
@@ -45,7 +50,7 @@ const GuesserMode = (() => {
       }
       const rgb = readRGBFromInputs();
       dom.hexBox.value = ColorEngine.rgbToHex(rgb);
-      setSwatch(rgb);
+      applyLiveColor(rgb);
       checkWin(rgb);
     }
 
@@ -63,7 +68,7 @@ const GuesserMode = (() => {
       dom.rgbBoxes.r.value = rgb.r;
       dom.rgbBoxes.g.value = rgb.g;
       dom.rgbBoxes.b.value = rgb.b;
-      setSwatch(rgb);
+      applyLiveColor(rgb);
       checkWin(rgb);
     }
 
@@ -113,7 +118,7 @@ const GuesserMode = (() => {
       active = true;
       dom.feedback.textContent = "Type a code to find the hidden color.";
       dom.feedback.classList.remove("pop");
-      setSwatch(START_RGB);
+      applyLiveColor(START_RGB);
       syncInputsFromRGB(START_RGB);
     }
 

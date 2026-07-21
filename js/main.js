@@ -19,6 +19,7 @@
     guesserOnly: Array.from(document.querySelectorAll("[data-guesser-only]")),
     pointerOnly: Array.from(document.querySelectorAll("[data-pointer-only]")),
     liveSwatch: document.getElementById("liveSwatch"),
+    codeInput: document.getElementById("codeInput"),
     rgbBoxes: {
       r: document.querySelector('[data-channel="r"]'),
       g: document.querySelector('[data-channel="g"]'),

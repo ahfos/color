@@ -159,11 +159,20 @@
   border-color: var(--accent);
 }
 
+/* The live-color ring: --live-outline is set from JS on every keystroke
+   (modeGuesser.js), so the frame around the numbers/hex always matches the
+   color they currently produce — a second, always-visible echo of the
+   swatch, right where you're typing. Falls back to a neutral border before
+   any input has happened. */
 .code-input__fields {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: 0.5rem 0.9rem;
+  border: 2.5px solid var(--live-outline, var(--border));
+  border-radius: 1.25rem;
+  transition: border-color 80ms linear;
 }
 
 .code-input__hash {
@@ -177,13 +186,13 @@
   font-size: 1.8rem;
   font-weight: 500;
   text-align: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: none;
+  border-radius: var(--radius-sm);
   padding: 0.6rem 0.25rem;
   width: 4.4rem;
-  background: var(--bg);
+  background: transparent;
   color: var(--fg);
-  transition: border-color var(--transition-fast);
+  transition: background var(--transition-fast);
   /* remove native number spinners */
   -moz-appearance: textfield;
 }
@@ -196,7 +205,7 @@
 
 .code-input__box:focus {
   outline: none;
-  border-color: var(--accent);
+  background: var(--border-subtle);
 }
 
 .code-input__box--hex {
