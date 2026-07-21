@@ -210,6 +210,10 @@
   background: var(--border-subtle);
 }
 
+.code-input__box:disabled {
+  opacity: 0.45;
+}
+
 .code-input__box--hex {
   width: 9.5rem;
   text-transform: uppercase;

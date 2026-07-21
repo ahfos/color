@@ -33,6 +33,7 @@
     },
     pointerTargetCode: document.getElementById("pointerTargetCode"),
     howCloseBtn: document.getElementById("howCloseBtn"),
+    submitBtn: document.getElementById("submitBtn"),
     confirmBtn: document.getElementById("confirmBtn"),
     newRoundBtn: document.getElementById("newRoundBtn"),
     feedback: document.getElementById("feedback"),

@@ -4,10 +4,13 @@
  * round — it never moves. The only live feedback is a ring around the code
  * inputs themselves, echoing the color the typed code currently produces,
  * so the player can compare it against the fixed swatch by eye.
+ *
+ * The round doesn't end by accident: typing never auto-completes it. The
+ * player commits their answer with "Submit" — the same explicit,
+ * scored-on-demand flow Point mode uses for "Confirm placement".
  */
 
 const GuesserMode = (() => {
-  const WIN_THRESHOLD = 97; // perceptual score (0-100) to auto-win
   const HINT_PENALTY = 6; // score points lost per "How close?" press
   const START_RGB = { r: 153, g: 153, b: 153 }; // neutral gray starting point
 
@@ -17,6 +20,7 @@ const GuesserMode = (() => {
     let target = null; // { r, g, b }
     let hintsUsed = 0;
     let active = false;
+    let confirmed = false;
 
     // The fixed target swatch — set once per round, never touched by input.
     function applyTargetSwatch(rgb) {
@@ -44,6 +48,15 @@ const GuesserMode = (() => {
       return { r, g, b };
     }
 
+    function setInputsDisabled(disabled) {
+      dom.rgbBoxes.r.disabled = disabled;
+      dom.rgbBoxes.g.disabled = disabled;
+      dom.rgbBoxes.b.disabled = disabled;
+      dom.hexBox.disabled = disabled;
+      dom.howCloseBtn.disabled = disabled;
+      dom.submitBtn.disabled = disabled;
+    }
+
     function onRgbBoxInput(e) {
       // Clamp the box the user just typed in to 0-255 immediately, so what's
       // displayed never silently disagrees with what's actually applied.
@@ -54,7 +67,6 @@ const GuesserMode = (() => {
       const rgb = readRGBFromInputs();
       dom.hexBox.value = ColorEngine.rgbToHex(rgb);
       applyLiveOutline(rgb);
-      checkWin(rgb);
     }
 
     function onHexBoxInput(e) {
@@ -72,19 +84,10 @@ const GuesserMode = (() => {
       dom.rgbBoxes.g.value = rgb.g;
       dom.rgbBoxes.b.value = rgb.b;
       applyLiveOutline(rgb);
-      checkWin(rgb);
-    }
-
-    function checkWin(rgb) {
-      if (!active) return;
-      const score = ColorEngine.perceptualScore(rgb, target);
-      if (score >= WIN_THRESHOLD) {
-        finishRound(rgb, score, hintsUsed);
-      }
     }
 
     function onHowClose() {
-      if (!active) return;
+      if (!active || confirmed) return;
       const rgb = readRGBFromInputs();
       const score = ColorEngine.perceptualScore(rgb, target);
       hintsUsed += 1;
@@ -95,23 +98,39 @@ const GuesserMode = (() => {
       // eslint-disable-next-line no-unused-expressions
       dom.feedback.offsetWidth; // restart animation
       dom.feedback.classList.add("pop");
-
-      if (score >= WIN_THRESHOLD) {
-        finishRound(rgb, score, hintsUsed);
-      }
     }
 
-    function finishRound(rgb, score, hints) {
+    // Scored the same way Point mode scores "Confirm placement": lock in
+    // whatever's currently typed, compute the match, and end the round —
+    // no silent auto-completion, just an explicit submit.
+    function onSubmit() {
+      if (!active || confirmed) return;
+      confirmed = true;
       active = false;
-      const finalScore = Math.max(0, Math.round(score - hints * HINT_PENALTY));
-      sounds.playCorrect();
+      setInputsDisabled(true);
+
+      const rgb = readRGBFromInputs();
+      const score = ColorEngine.perceptualScore(rgb, target);
+      const finalScore = Math.max(0, Math.round(score - hintsUsed * HINT_PENALTY));
+
+      if (score >= 90) sounds.playCorrect();
+      else if (score >= 60) sounds.playClose();
+      else sounds.playWrong();
+
+      const label = ColorEngine.scoreLabel(score);
+      dom.feedback.textContent = `${label} — ${Math.round(score)}% match`;
+      dom.feedback.classList.remove("pop");
+      // eslint-disable-next-line no-unused-expressions
+      dom.feedback.offsetWidth;
+      dom.feedback.classList.add("pop");
+
       onWin({
         mode: "guesser",
         guess: rgb,
         target,
         score,
         finalScore,
-        hintsUsed: hints,
+        hintsUsed,
       });
     }
 
@@ -119,7 +138,9 @@ const GuesserMode = (() => {
       target = ColorEngine.randomRGBConstrained(difficulty);
       hintsUsed = 0;
       active = true;
-      dom.feedback.textContent = "Type a code to find the hidden color.";
+      confirmed = false;
+      setInputsDisabled(false);
+      dom.feedback.textContent = "Type a code, then submit your guess.";
       dom.feedback.classList.remove("pop");
       applyTargetSwatch(target);
       applyLiveOutline(START_RGB);
@@ -139,16 +160,19 @@ const GuesserMode = (() => {
       dom.rgbBoxes.b.addEventListener("input", onRgbBoxInput);
       dom.hexBox.addEventListener("input", onHexBoxInput);
       dom.howCloseBtn.addEventListener("click", onHowClose);
+      dom.submitBtn.addEventListener("click", onSubmit);
       newRound(ctx.getDifficulty());
     }
 
     function deactivate() {
       active = false;
+      setInputsDisabled(false);
       dom.rgbBoxes.r.removeEventListener("input", onRgbBoxInput);
       dom.rgbBoxes.g.removeEventListener("input", onRgbBoxInput);
       dom.rgbBoxes.b.removeEventListener("input", onRgbBoxInput);
       dom.hexBox.removeEventListener("input", onHexBoxInput);
       dom.howCloseBtn.removeEventListener("click", onHowClose);
+      dom.submitBtn.removeEventListener("click", onSubmit);
     }
 
     return {
