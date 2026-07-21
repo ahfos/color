@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>COLOR — spot the code</title>
+    <meta
+      name="description"
+      content="A color-spotting game companion to TypedUp. Get faster and more accurate at reading RGB/Hex codes."
+    />
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/color.css" />
+  </head>
+  <body>
+    <div class="app-shell page-enter">
+      <header class="app-header">
+        <img class="app-header__logo" src="assets/logo.svg" alt="COLOR" />
+        <div class="mode-toggle" role="tablist" aria-label="Game mode">
+          <button
+            type="button"
+            class="mode-toggle__btn is-active"
+            data-mode="guesser"
+            role="tab"
+            aria-selected="true"
+          >
+            Code&nbsp;→&nbsp;Color
+          </button>
+          <button type="button" class="mode-toggle__btn" data-mode="pointer" role="tab" aria-selected="false">
+            Color&nbsp;→&nbsp;Code
+          </button>
+        </div>
+      </header>
+
+      <main class="game" id="game">
+        <div class="target-display" data-pointer-only hidden>
+          <span class="target-display__label">Find this color</span>
+          <span class="target-display__code" id="pointerTargetCode">#FFFFFF</span>
+        </div>
+
+        <div class="swatch-row" data-guesser-only>
+          <div class="swatch" id="liveSwatch" aria-hidden="true"></div>
+
+          <div class="code-input" id="codeInput">
+            <div class="code-input__toggle" role="tablist" aria-label="Code format">
+              <button type="button" class="code-input__toggle-btn is-active" data-format="rgb">RGB</button>
+              <button type="button" class="code-input__toggle-btn" data-format="hex">HEX</button>
+            </div>
+
+            <div class="code-input__fields" data-format-fields="rgb">
+              <input
+                class="code-input__box"
+                type="number"
+                min="0"
+                max="255"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                data-channel="r"
+                placeholder="R"
+                aria-label="Red channel"
+              />
+              <input
+                class="code-input__box"
+                type="number"
+                min="0"
+                max="255"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                data-channel="g"
+                placeholder="G"
+                aria-label="Green channel"
+              />
+              <input
+                class="code-input__box"
+                type="number"
+                min="0"
+                max="255"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                data-channel="b"
+                placeholder="B"
+                aria-label="Blue channel"
+              />
+            </div>
+
+            <div class="code-input__fields" data-format-fields="hex" hidden>
+              <span class="code-input__hash">#</span>
+              <input
+                class="code-input__box code-input__box--hex"
+                type="text"
+                maxlength="6"
+                inputmode="text"
+                autocapitalize="characters"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                data-channel="hex"
+                placeholder="RRGGBB"
+                aria-label="Hex code"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="color-map" data-color-map>
+          <div class="color-map__sv" data-map-sv>
+            <canvas data-map-sv-canvas></canvas>
+            <div class="color-map__marker color-map__marker--ghost" data-map-sv-ghost hidden></div>
+            <div class="color-map__marker" data-map-sv-marker></div>
+          </div>
+          <div class="color-map__hue" data-map-hue>
+            <canvas data-map-hue-canvas></canvas>
+            <div class="color-map__marker color-map__marker--hue color-map__marker--ghost" data-map-hue-ghost hidden></div>
+            <div class="color-map__marker color-map__marker--hue" data-map-hue-marker></div>
+          </div>
+        </div>
+
+        <div class="game-actions">
+          <button type="button" class="btn" id="howCloseBtn" data-guesser-only>
+            How close? <span class="hint-cost">(costs a hint)</span>
+          </button>
+          <button type="button" class="btn btn--primary" id="confirmBtn" data-pointer-only hidden>
+            Confirm placement
+          </button>
+          <button type="button" class="btn" id="newRoundBtn">New color</button>
+        </div>
+
+        <p class="feedback" id="feedback" aria-live="polite"></p>
+      </main>
+
+      <footer class="app-footer">
+        <span class="app-footer__stat">Score <strong id="scoreCounter">0</strong></span>
+        <span class="app-footer__stat">Streak <strong id="streakCounter">0</strong></span>
+        <a class="app-footer__credit" href="https://www.ahfos.com" target="_blank" rel="noopener noreferrer"
+          >MADE BY AHFOS</a
+        >
+      </footer>
+    </div>
+
+    <div class="results-overlay" id="resultsOverlay" hidden>
+      <div class="results-card">
+        <h2 class="results-card__title" id="resultsTitle">Nailed it</h2>
+        <div class="results-card__swatches">
+          <div class="results-swatch">
+            <span class="results-swatch__label">Your guess</span>
+            <div class="results-swatch__color" id="resultGuessSwatch"></div>
+            <span class="results-swatch__code" id="resultGuessCode"></span>
+          </div>
+          <div class="results-swatch">
+            <span class="results-swatch__label">Target</span>
+            <div class="results-swatch__color" id="resultTargetSwatch"></div>
+            <span class="results-swatch__code" id="resultTargetCode"></span>
+          </div>
+        </div>
+        <p class="results-card__score" id="resultsScore"></p>
+        <div class="results-card__actions">
+          <button type="button" class="btn" id="wallpaperBtn">Save as wallpaper</button>
+          <button type="button" class="btn btn--primary" id="playAgainBtn">Play again</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wallpaper-overlay" id="wallpaperOverlay" hidden>
+      <div class="wallpaper-card">
+        <h3>Save as wallpaper</h3>
+        <label class="wallpaper-option">
+          <input type="radio" name="wallpaperOrientation" value="landscape" checked />
+          4K Landscape (3840×2160)
+        </label>
+        <label class="wallpaper-option">
+          <input type="radio" name="wallpaperOrientation" value="portrait" />
+          4K Portrait (2160×3840)
+        </label>
+        <label class="wallpaper-option">
+          <input type="checkbox" id="wallpaperShowHex" />
+          Print hex code in corner
+        </label>
+        <div class="wallpaper-card__actions">
+          <button type="button" class="btn" id="wallpaperCancelBtn">Cancel</button>
+          <button type="button" class="btn btn--primary" id="wallpaperDownloadBtn">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/colorEngine.js"></script>
+    <script src="js/sounds.js"></script>
+    <script src="js/colorMap.js"></script>
+    <script src="js/wallpaper.js"></script>
+    <script src="js/modeGuesser.js"></script>
+    <script src="js/modePointer.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
