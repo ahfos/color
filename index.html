@@ -25,6 +25,14 @@
         </svg>
       </button>
 
+      <button type="button" class="landing__help-trigger" id="helpTriggerBtn" aria-label="How RGB and Hex codes work">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.4 9.3a2.6 2.6 0 0 1 5.05.9c0 1.7-2.05 1.9-2.4 3.3" stroke-linecap="round" />
+          <circle cx="12" cy="17.2" r="0.15" fill="currentColor" stroke-width="1" />
+        </svg>
+      </button>
+
       <div class="landing__main">
         <div class="landing__logo">
           <img src="assets/logo.svg" alt="COLOR" />
@@ -333,6 +341,72 @@
       </div>
     </div>
 
+    <div class="manual-overlay" id="manualOverlay" hidden>
+      <button type="button" class="manual-overlay__backdrop" id="manualBackdrop" aria-label="Close"></button>
+      <div class="manual-card">
+        <button type="button" class="manual-card__close" id="manualCloseBtn" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="5" y1="5" x2="19" y2="19" />
+            <line x1="19" y1="5" x2="5" y2="19" />
+          </svg>
+        </button>
+
+        <span class="manual-card__eyebrow">The Manual</span>
+        <h2 class="manual-card__title">RGB &amp; Hex, Decoded</h2>
+        <p class="manual-card__intro">It's not a guess. It's arithmetic wearing a costume.</p>
+
+        <div class="manual-section">
+          <h3 class="manual-section__title">01 — RGB</h3>
+          <p class="manual-section__text">
+            Every color is three numbers: how much Red, Green and Blue light to mix. Each one runs
+            0 to 255 — 256 steps, because a computer counts in 8&#8209;bit bytes, and 2⁸ = 256.
+          </p>
+        </div>
+
+        <div class="manual-section">
+          <h3 class="manual-section__title">02 — Hex</h3>
+          <p class="manual-section__text">
+            Hex writes those same three numbers in base 16 instead of base 10 — two digits per
+            channel, 00 to FF, because 16 × 16 = 256. FF isn't a limit. It's just "255," spelled
+            in a different counting system.
+          </p>
+        </div>
+
+        <div class="manual-section">
+          <h3 class="manual-section__title">03 — Decode one</h3>
+          <div class="manual-breakdown" id="manualBreakdown">
+            <div class="manual-breakdown__code">
+              <span class="manual-breakdown__chunk manual-breakdown__chunk--r">33</span>
+              <span class="manual-breakdown__chunk manual-breakdown__chunk--g">99</span>
+              <span class="manual-breakdown__chunk manual-breakdown__chunk--b">FF</span>
+            </div>
+            <div class="manual-breakdown__rows">
+              <div class="manual-breakdown__row manual-breakdown__row--r">
+                <span class="manual-breakdown__formula">3 × 16 + 3</span>
+                <span class="manual-breakdown__eq">= 51</span>
+              </div>
+              <div class="manual-breakdown__row manual-breakdown__row--g">
+                <span class="manual-breakdown__formula">9 × 16 + 9</span>
+                <span class="manual-breakdown__eq">= 153</span>
+              </div>
+              <div class="manual-breakdown__row manual-breakdown__row--b">
+                <span class="manual-breakdown__formula">15 × 16 + 15</span>
+                <span class="manual-breakdown__eq">= 255</span>
+              </div>
+            </div>
+          </div>
+          <p class="manual-section__text">
+            First digit = how many 16s. Second digit = what's left over. A–F just cover 10–15, so
+            one digit can hold a value past 9. <strong>#3399FF</strong> and
+            <strong>rgb(51, 153, 255)</strong> are the same color — two number systems, same
+            three ingredients.
+          </p>
+        </div>
+
+        <button type="button" class="btn btn--primary manual-card__download" id="manualDownloadBtn">Download as PNG</button>
+      </div>
+    </div>
+
     <script src="js/colorEngine.js"></script>
     <script src="js/sounds.js"></script>
     <script src="js/colorMap.js"></script>
@@ -341,6 +415,7 @@
     <script src="js/colorNames.js"></script>
     <script src="js/pairingsWheel.js"></script>
     <script src="js/bentoExport.js"></script>
+    <script src="js/manual.js"></script>
     <script src="js/modeGuesser.js"></script>
     <script src="js/modePointer.js"></script>
     <script src="js/pairings.js"></script>

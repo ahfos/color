@@ -348,6 +348,26 @@
   color: var(--accent);
 }
 
+.landing__help-trigger {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--fg);
+  opacity: 0.55;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.landing__help-trigger:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
 .landing__main {
   flex: 1;
   display: flex;
@@ -656,6 +676,191 @@
 
 .wallpaper-card__actions {
   margin-top: var(--space-4);
+}
+
+/* ---- manual overlay (the "?" on the landing page) ---- */
+
+.manual-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+.manual-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.manual-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 26rem;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.35);
+}
+
+.manual-card__close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--muted);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.manual-card__close:hover {
+  color: var(--fg);
+  background: var(--border-subtle);
+}
+
+.manual-card__eyebrow {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #888888;
+  margin-bottom: 0.5rem;
+}
+
+.manual-card__title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.manual-card__intro {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: var(--space-6);
+}
+
+.manual-section {
+  margin-bottom: var(--space-6);
+}
+
+.manual-section__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+.manual-section__text {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--fg);
+}
+
+.manual-section__text strong {
+  font-family: var(--mono-font);
+  font-weight: 600;
+}
+
+.manual-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.75rem 0 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--border-subtle);
+}
+
+.manual-breakdown__code {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  font-family: var(--mono-font);
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.manual-breakdown__chunk {
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius-sm);
+}
+
+.manual-breakdown__chunk--r {
+  color: #c41e24;
+  background: rgba(196, 30, 36, 0.1);
+}
+
+.manual-breakdown__chunk--g {
+  color: #1f8a4c;
+  background: rgba(31, 138, 76, 0.1);
+}
+
+.manual-breakdown__chunk--b {
+  color: #2064c4;
+  background: rgba(32, 100, 196, 0.1);
+}
+
+.manual-breakdown__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.manual-breakdown__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid transparent;
+}
+
+.manual-breakdown__row--r {
+  border-left-color: #c41e24;
+}
+
+.manual-breakdown__row--g {
+  border-left-color: #1f8a4c;
+}
+
+.manual-breakdown__row--b {
+  border-left-color: #2064c4;
+}
+
+.manual-breakdown__formula {
+  color: var(--muted);
+}
+
+.manual-breakdown__eq {
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.manual-card__download {
+  width: 100%;
+  margin-top: 0.25rem;
 }
 
 /* ---- pairings: header title ---- */
