@@ -1038,6 +1038,8 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.55rem 0.15rem;
   border-bottom: 1px solid var(--border-subtle);
   text-align: left;

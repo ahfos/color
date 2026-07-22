@@ -13,6 +13,12 @@
 
 const BentoExport = (() => {
   const SCALE = 2; // supersample for a crisp download regardless of screen DPR
+  // Mobile browsers (iOS Safari in particular) cap a canvas's pixel area
+  // and per-dimension size well below desktop — a tall "All" export at a
+  // flat 2x scale can exceed that ceiling and silently fail to encode.
+  // Clamp the effective scale so neither dimension crosses this, instead
+  // of always supersampling at a fixed factor.
+  const MAX_CANVAS_DIM = 4000;
   const W = 1400;
   const PAD = 56;
   const GAP = 24;
@@ -37,6 +43,19 @@ const BentoExport = (() => {
       img.src = src;
     });
   }
+
+  // Kick this off the moment the module loads rather than when the user
+  // clicks Export. A fresh fetch+decode started *after* the click can run
+  // long enough that iOS Safari treats the tap's transient user-activation
+  // as expired by the time we get to canvas.toBlob()/the download — the
+  // export then silently no-ops. Warming the cache means the await below
+  // usually resolves on an already-settled promise instead.
+  let logoPromise = null;
+  function getLogo() {
+    if (!logoPromise) logoPromise = loadImage("assets/logo.svg").catch(() => null);
+    return logoPromise;
+  }
+  getLogo();
 
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -168,18 +187,42 @@ const BentoExport = (() => {
     }
   }
 
-  function download(canvas, filename) {
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-    }, "image/png");
+  function canvasToBlob(canvas) {
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  }
+
+  /**
+   * iOS Safari doesn't reliably honor the `download` attribute on an <a> —
+   * tapping it just opens the image instead of saving a file. Prefer the
+   * Web Share API's file support where available (Safari/iOS, most
+   * Android browsers): it hands the user a real "Save Image" sheet. Falls
+   * back to the classic <a download> click for desktop browsers.
+   */
+  async function download(canvas, filename) {
+    const blob = await canvasToBlob(canvas);
+    if (!blob) return;
+
+    if (navigator.canShare && navigator.share) {
+      try {
+        const file = new File([blob], filename, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      } catch {
+        // Share sheet dismissed/unsupported mid-flight — fall through to a
+        // direct download instead of leaving the user with nothing.
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
   const HEADER_H = 130;
@@ -192,12 +235,13 @@ const BentoExport = (() => {
     const base = colors[0];
     const gridH = measureGridHeight(colors.length);
     const H = HEADER_H + gridH + SECTION_GAP + FOOTER_H;
+    const scale = Math.min(SCALE, MAX_CANVAS_DIM / W, MAX_CANVAS_DIM / H);
 
     const canvas = document.createElement("canvas");
-    canvas.width = W * SCALE;
-    canvas.height = H * SCALE;
+    canvas.width = Math.round(W * scale);
+    canvas.height = Math.round(H * scale);
     const ctx = canvas.getContext("2d");
-    ctx.scale(SCALE, SCALE);
+    ctx.scale(scale, scale);
 
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, H);
@@ -205,17 +249,12 @@ const BentoExport = (() => {
     drawHeader(ctx, base, meta.harmonyLabel || "");
     layoutGrid(ctx, colors, PAD, HEADER_H, CONTENT_W);
 
-    let logoImg = null;
-    try {
-      logoImg = await loadImage("assets/logo.svg");
-    } catch {
-      /* footer still renders without the mark */
-    }
+    const logoImg = await getLogo();
     drawFooter(ctx, H, logoImg);
 
     const hex = base.hex.toLowerCase();
     const harmony = (meta.harmonyId || "palette").toLowerCase();
-    download(canvas, `color-pairings-${hex}-${harmony}.png`);
+    await download(canvas, `color-pairings-${hex}-${harmony}.png`);
   }
 
   /** "All" export: Base, then every harmony group under its own heading. */
@@ -226,12 +265,13 @@ const BentoExport = (() => {
       H += HEADING_H + measureGridHeight(g.colors.length) + SECTION_GAP;
     });
     H += FOOTER_H;
+    const scale = Math.min(SCALE, MAX_CANVAS_DIM / W, MAX_CANVAS_DIM / H);
 
     const canvas = document.createElement("canvas");
-    canvas.width = W * SCALE;
-    canvas.height = H * SCALE;
+    canvas.width = Math.round(W * scale);
+    canvas.height = Math.round(H * scale);
     const ctx = canvas.getContext("2d");
-    ctx.scale(SCALE, SCALE);
+    ctx.scale(scale, scale);
 
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, H);
@@ -249,15 +289,10 @@ const BentoExport = (() => {
       cy += layoutGrid(ctx, g.colors, PAD, cy, CONTENT_W) + SECTION_GAP;
     });
 
-    let logoImg = null;
-    try {
-      logoImg = await loadImage("assets/logo.svg");
-    } catch {
-      /* footer still renders without the mark */
-    }
+    const logoImg = await getLogo();
     drawFooter(ctx, H, logoImg);
 
-    download(canvas, `color-pairings-${base.hex.toLowerCase()}-all.png`);
+    await download(canvas, `color-pairings-${base.hex.toLowerCase()}-all.png`);
   }
 
   return { exportPNG, exportAllPNG };
