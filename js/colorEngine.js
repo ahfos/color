@@ -228,10 +228,20 @@ const ColorEngine = (() => {
     return hsvToRgb({ h: hsv.h + deg, s: hsv.s, v: hsv.v });
   }
 
+  /**
+   * Rotating hue by 180deg is a no-op on an achromatic color (white,
+   * black, any pure gray) -- saturation is 0, so there's no hue to
+   * rotate. That silently returned the same color as its own
+   * "complementary," which contradicts the one thing everyone already
+   * knows about complements: white's is black. For s~=0, fall back to
+   * inverting value instead.
+   */
   function harmonyComplementary(rgb) {
+    const hsv = rgbToHsv(rgb);
+    const complement = hsv.s < 1 ? hsvToRgb({ h: hsv.h, s: 0, v: 100 - hsv.v }) : shiftHue(rgb, 180);
     return [
       { label: "Base", rgb },
-      { label: "Complementary", rgb: shiftHue(rgb, 180) },
+      { label: "Complementary", rgb: complement },
     ];
   }
 
