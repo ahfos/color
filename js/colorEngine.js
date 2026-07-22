@@ -151,6 +151,167 @@ const ColorEngine = (() => {
     return rgbToHex(hsvToRgb(hsv));
   }
 
+  // ---------- additional format conversions (Pairings) ----------
+
+  function rgbToCmyk({ r, g, b }) {
+    if (r === 0 && g === 0 && b === 0) return { c: 0, m: 0, y: 0, k: 100 };
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const k = 1 - Math.max(rn, gn, bn);
+    const c = (1 - rn - k) / (1 - k);
+    const m = (1 - gn - k) / (1 - k);
+    const y = (1 - bn - k) / (1 - k);
+    return {
+      c: Math.round(c * 100),
+      m: Math.round(m * 100),
+      y: Math.round(y * 100),
+      k: Math.round(k * 100),
+    };
+  }
+
+  function rgbToHsl({ r, g, b }) {
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const max = Math.max(rn, gn, bn);
+    const min = Math.min(rn, gn, bn);
+    const l = (max + min) / 2;
+    const d = max - min;
+
+    let h = 0;
+    let s = 0;
+    if (d !== 0) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      if (max === rn) h = ((gn - bn) / d) % 6;
+      else if (max === gn) h = (bn - rn) / d + 2;
+      else h = (rn - gn) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    return { h, s: s * 100, l: l * 100 };
+  }
+
+  /** sRGB -> linear-light for a single channel (0-255 in, 0-1 out). */
+  function srgbChannelToLinear(c) {
+    const cs = c / 255;
+    return cs <= 0.03928 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4);
+  }
+
+  /** WCAG relative luminance, 0 (black) .. 1 (white). */
+  function relativeLuminance({ r, g, b }) {
+    return 0.2126 * srgbChannelToLinear(r) + 0.7152 * srgbChannelToLinear(g) + 0.0722 * srgbChannelToLinear(b);
+  }
+
+  /** WCAG contrast ratio between two colors, 1 (no contrast) .. 21 (black/white). */
+  function contrastRatio(rgbA, rgbB) {
+    const l1 = relativeLuminance(rgbA);
+    const l2 = relativeLuminance(rgbB);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  /** WCAG tier for a contrast ratio against normal-size text. */
+  function contrastTier(ratio) {
+    if (ratio >= 7) return "AAA";
+    if (ratio >= 4.5) return "AA";
+    if (ratio >= 3) return "AA Large";
+    return "Fail";
+  }
+
+  // ---------- color harmony (Pairings) ----------
+
+  /** Rotates a color's hue by `deg`, keeping saturation and value fixed. */
+  function shiftHue(rgb, deg) {
+    const hsv = rgbToHsv(rgb);
+    return hsvToRgb({ h: hsv.h + deg, s: hsv.s, v: hsv.v });
+  }
+
+  function harmonyComplementary(rgb) {
+    return [
+      { label: "Base", rgb },
+      { label: "Complementary", rgb: shiftHue(rgb, 180) },
+    ];
+  }
+
+  function harmonyAnalogous(rgb) {
+    return [
+      { label: "Base", rgb },
+      { label: "Analogous −30°", rgb: shiftHue(rgb, -30) },
+      { label: "Analogous +30°", rgb: shiftHue(rgb, 30) },
+    ];
+  }
+
+  function harmonyTriadic(rgb) {
+    return [
+      { label: "Base", rgb },
+      { label: "Triadic +120°", rgb: shiftHue(rgb, 120) },
+      { label: "Triadic +240°", rgb: shiftHue(rgb, 240) },
+    ];
+  }
+
+  function harmonySplitComplementary(rgb) {
+    return [
+      { label: "Base", rgb },
+      { label: "Split +150°", rgb: shiftHue(rgb, 150) },
+      { label: "Split +210°", rgb: shiftHue(rgb, 210) },
+    ];
+  }
+
+  function harmonyTetradic(rgb) {
+    return [
+      { label: "Base", rgb },
+      { label: "Tetradic +90°", rgb: shiftHue(rgb, 90) },
+      { label: "Tetradic +180°", rgb: shiftHue(rgb, 180) },
+      { label: "Tetradic +270°", rgb: shiftHue(rgb, 270) },
+    ];
+  }
+
+  /**
+   * Same hue & saturation, stepped value (lightness). Note this collapses
+   * to a single point on a hue/saturation wheel — callers should present
+   * these as a shade ladder rather than distinct wheel positions.
+   */
+  function harmonyMonochromatic(rgb) {
+    const hsv = rgbToHsv(rgb);
+    const deltas = [-36, -18, 18, 36];
+    const variants = deltas.map((d) => {
+      const v = clamp(hsv.v + d, 6, 100);
+      const label = d < 0 ? `Shade ${d}%` : `Tint +${d}%`;
+      return { label, rgb: hsvToRgb({ h: hsv.h, s: hsv.s, v }) };
+    });
+    return [{ label: "Base", rgb }, ...variants];
+  }
+
+  const HARMONY_TYPES = [
+    { id: "complementary", label: "Complementary" },
+    { id: "analogous", label: "Analogous" },
+    { id: "triadic", label: "Triadic" },
+    { id: "splitComplementary", label: "Split-Comp" },
+    { id: "tetradic", label: "Tetradic" },
+    { id: "monochromatic", label: "Monochromatic" },
+  ];
+
+  /** Dispatches to the right harmony generator. Always returns Base first. */
+  function getHarmony(rgb, type) {
+    switch (type) {
+      case "analogous":
+        return harmonyAnalogous(rgb);
+      case "triadic":
+        return harmonyTriadic(rgb);
+      case "splitComplementary":
+        return harmonySplitComplementary(rgb);
+      case "tetradic":
+        return harmonyTetradic(rgb);
+      case "monochromatic":
+        return harmonyMonochromatic(rgb);
+      case "complementary":
+      default:
+        return harmonyComplementary(rgb);
+    }
+  }
+
   // ---------- distance / scoring ----------
 
   /**
@@ -317,5 +478,13 @@ const ColorEngine = (() => {
     perceptualScore,
     scoreLabel,
     MAX_DISTANCE,
+    rgbToCmyk,
+    rgbToHsl,
+    relativeLuminance,
+    contrastRatio,
+    contrastTier,
+    shiftHue,
+    getHarmony,
+    HARMONY_TYPES,
   };
 })();

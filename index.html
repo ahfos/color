@@ -29,16 +29,30 @@
         <div class="landing__logo">
           <img src="assets/logo.svg" alt="COLOR" />
         </div>
-        <nav class="landing__levels" aria-label="Game mode">
-          <button type="button" class="landing__level" data-enter-mode="guesser">
-            <span class="landing__level-title">Guess</span>
-            <span class="landing__level-sub">Type codes to find the hidden color</span>
-          </button>
-          <button type="button" class="landing__level" data-enter-mode="pointer">
-            <span class="landing__level-title">Point</span>
-            <span class="landing__level-sub">Given a code, mark where it lives</span>
-          </button>
-        </nav>
+
+        <div class="landing__section">
+          <div class="landing__divider">Work</div>
+          <nav class="landing__levels" aria-label="Tools">
+            <button type="button" class="landing__level" id="openPairingsBtn">
+              <span class="landing__level-title">Color Pairings</span>
+              <span class="landing__level-sub">Enter any hex or RGB and get its complementary, analogous, triadic, split-comp, tetradic and monochromatic matches — plotted on a wheel and exportable as a palette card.</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="landing__section">
+          <div class="landing__divider">Play</div>
+          <nav class="landing__levels" aria-label="Game mode">
+            <button type="button" class="landing__level" data-enter-mode="guesser">
+              <span class="landing__level-title">Guess</span>
+              <span class="landing__level-sub">Type codes to find the hidden color</span>
+            </button>
+            <button type="button" class="landing__level" data-enter-mode="pointer">
+              <span class="landing__level-title">Point</span>
+              <span class="landing__level-sub">Given a code, mark where it lives</span>
+            </button>
+          </nav>
+        </div>
       </div>
 
       <footer class="landing__credit">
@@ -166,6 +180,89 @@
       </main>
     </div>
 
+    <div id="pairingsView" class="app-shell" hidden>
+      <header class="app-header">
+        <div class="app-header__left">
+          <button type="button" class="back-link" id="pairingsBackBtn" aria-label="Back to home">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+          </button>
+          <button type="button" class="app-header__logo-btn" id="pairingsLogoBtn" aria-label="COLOR — back to home">
+            <img class="app-header__logo" src="assets/logo.svg" alt="" />
+          </button>
+        </div>
+        <h1 class="pairings-header__title">Color Pairings</h1>
+      </header>
+
+      <main class="pairings" id="pairings">
+        <div class="pairings-input">
+          <div class="code-input" id="pairingsCodeInput" data-pairings-code-input>
+            <div class="code-input__toggle" role="tablist" aria-label="Code format">
+              <button type="button" class="code-input__toggle-btn is-active" data-pairings-format="hex">HEX</button>
+              <button type="button" class="code-input__toggle-btn" data-pairings-format="rgb">RGB</button>
+            </div>
+
+            <div class="code-input__fields" data-pairings-format-fields="hex">
+              <span class="code-input__hash">#</span>
+              <input
+                class="code-input__box code-input__box--hex"
+                type="text"
+                maxlength="6"
+                inputmode="text"
+                autocapitalize="characters"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                data-pairings-channel="hex"
+                placeholder="RRGGBB"
+                aria-label="Hex code"
+              />
+            </div>
+
+            <div class="code-input__fields" data-pairings-format-fields="rgb" hidden>
+              <input class="code-input__box" type="number" min="0" max="255" inputmode="numeric" pattern="[0-9]*" data-pairings-channel="r" placeholder="R" aria-label="Red channel" />
+              <input class="code-input__box" type="number" min="0" max="255" inputmode="numeric" pattern="[0-9]*" data-pairings-channel="g" placeholder="G" aria-label="Green channel" />
+              <input class="code-input__box" type="number" min="0" max="255" inputmode="numeric" pattern="[0-9]*" data-pairings-channel="b" placeholder="B" aria-label="Blue channel" />
+            </div>
+          </div>
+          <button type="button" class="btn" id="pairingsRandomBtn">Random</button>
+        </div>
+
+        <div class="pairings-harmony-tabs" role="tablist" aria-label="Harmony type">
+          <button type="button" class="pairings-harmony-tab is-active" role="tab" aria-selected="true" data-harmony="complementary">Complementary</button>
+          <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="analogous">Analogous</button>
+          <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="triadic">Triadic</button>
+          <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="splitComplementary">Split-Comp</button>
+          <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="tetradic">Tetradic</button>
+          <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="monochromatic">Monochromatic</button>
+        </div>
+
+        <div class="pairings-wheel-wrap">
+          <div class="pairings-wheel" data-pairings-wheel>
+            <canvas data-pairings-wheel-canvas></canvas>
+            <div class="pairings-wheel__markers" data-pairings-wheel-markers></div>
+          </div>
+          <p class="pairings-wheel__note" data-pairings-wheel-note hidden>
+            Monochromatic shades share one hue &amp; saturation — a wheel can't show lightness, so they're stacked at one point. See the ladder below.
+          </p>
+        </div>
+
+        <div class="pairings-recent" id="pairingsRecent" aria-label="Recently used colors" hidden></div>
+
+        <section class="bento" id="pairingsBento" aria-label="Palette details"></section>
+
+        <div class="pairings-actions">
+          <button type="button" class="btn" id="pairingsCopyAllBtn">Copy all</button>
+          <button type="button" class="btn" id="pairingsShareLinkBtn">Copy link</button>
+          <button type="button" class="btn btn--primary" id="pairingsExportBtn">Export PNG</button>
+        </div>
+
+        <p class="feedback" id="pairingsFeedback" aria-live="polite"></p>
+      </main>
+    </div>
+
     <div class="results-overlay" id="resultsOverlay" hidden>
       <div class="results-card">
         <h2 class="results-card__title" id="resultsTitle">Nailed it</h2>
@@ -231,8 +328,12 @@
     <script src="js/colorMap.js"></script>
     <script src="js/wallpaper.js"></script>
     <script src="js/share.js"></script>
+    <script src="js/colorNames.js"></script>
+    <script src="js/pairingsWheel.js"></script>
+    <script src="js/bentoExport.js"></script>
     <script src="js/modeGuesser.js"></script>
     <script src="js/modePointer.js"></script>
+    <script src="js/pairings.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>
