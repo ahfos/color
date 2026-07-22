@@ -35,7 +35,7 @@
           <nav class="landing__levels" aria-label="Tools">
             <button type="button" class="landing__level" id="openPairingsBtn">
               <span class="landing__level-title">Color Pairings</span>
-              <span class="landing__level-sub">Enter any hex or RGB and get its complementary, analogous, triadic, split-comp, tetradic and monochromatic matches — plotted on a wheel and exportable as a palette card.</span>
+              <span class="landing__level-sub">Find a color's matches on a wheel</span>
             </button>
           </nav>
         </div>
@@ -197,6 +197,11 @@
       </header>
 
       <main class="pairings" id="pairings">
+        <div class="pairings-history" id="pairingsHistory" hidden>
+          <span class="pairings-history__title">History</span>
+          <div class="pairings-recent" id="pairingsRecent" aria-label="Recently used colors"></div>
+        </div>
+
         <div class="pairings-input">
           <div class="code-input" id="pairingsCodeInput" data-pairings-code-input>
             <div class="code-input__toggle" role="tablist" aria-label="Code format">
@@ -227,10 +232,12 @@
               <input class="code-input__box" type="number" min="0" max="255" inputmode="numeric" pattern="[0-9]*" data-pairings-channel="b" placeholder="B" aria-label="Blue channel" />
             </div>
           </div>
-          <button type="button" class="btn" id="pairingsRandomBtn">Random</button>
         </div>
 
+        <button type="button" class="btn pairings-random-btn" id="pairingsRandomBtn">Random</button>
+
         <div class="pairings-harmony-tabs" role="tablist" aria-label="Harmony type">
+          <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="all">All</button>
           <button type="button" class="pairings-harmony-tab is-active" role="tab" aria-selected="true" data-harmony="complementary">Complementary</button>
           <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="analogous">Analogous</button>
           <button type="button" class="pairings-harmony-tab" role="tab" aria-selected="false" data-harmony="triadic">Triadic</button>
@@ -249,9 +256,12 @@
           </p>
         </div>
 
-        <div class="pairings-recent" id="pairingsRecent" aria-label="Recently used colors" hidden></div>
+        <section class="pairings-bento" id="pairingsBento" aria-label="Palette details"></section>
 
-        <section class="bento" id="pairingsBento" aria-label="Palette details"></section>
+        <section class="pairings-contrast" id="pairingsContrast" aria-label="Contrast pairs" hidden>
+          <span class="pairings-contrast__title">Contrast</span>
+          <div class="pairings-contrast__list" id="pairingsContrastList"></div>
+        </section>
 
         <div class="pairings-actions">
           <button type="button" class="btn" id="pairingsCopyAllBtn">Copy all</button>

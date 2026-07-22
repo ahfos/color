@@ -1,21 +1,42 @@
 /**
  * bentoExport.js
- * Renders the current pairing (base + harmony colors, with all four code
- * formats) to an off-screen canvas and downloads it as a PNG — the same
+ * Renders the current Pairings palette (base + harmony colors, every code
+ * format) to an off-screen canvas and downloads it as a PNG — the same
  * "draw it ourselves, no DOM screenshot library" approach as wallpaper.js,
  * so the export never depends on how the live bento grid happens to have
- * laid out or wrapped in the browser.
+ * wrapped in the browser.
+ *
+ * Every card is drawn at the same fixed size, in both the flat single-
+ * harmony export and every group of the "All" export — no big-featured/
+ * small-secondary split.
  */
 
 const BentoExport = (() => {
   const SCALE = 2; // supersample for a crisp download regardless of screen DPR
   const W = 1400;
   const PAD = 56;
+  const GAP = 24;
+  const CARD_W = 260;
+  const SWATCH_H = 160;
+  const TEXT_H = 190;
+  const CARD_H = SWATCH_H + TEXT_H;
+  const CONTENT_W = W - PAD * 2;
+  const MAX_COLS = Math.max(1, Math.floor((CONTENT_W + GAP) / (CARD_W + GAP)));
+
   const FONT = '"Helvetica Neue", Arial, sans-serif';
   const FG = "#000000";
   const MUTED = "#888888";
   const BORDER = "#e5e5e5";
   const ACCENT = "#c41e24";
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+      img.src = src;
+    });
+  }
 
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -54,143 +75,97 @@ const BentoExport = (() => {
     return cw >= cb ? "#ffffff" : "#000000";
   }
 
-  /** One card: swatch block on top, code details on a plain card body below. */
-  function drawCard(ctx, entry, x, y, w, h, { swatchRatio = 0.42 } = {}) {
-    roundRect(ctx, x, y, w, h, 20);
+  /** One fixed-size card: square-ish swatch on top, code details below. */
+  function drawCard(ctx, entry, x, y) {
+    roundRect(ctx, x, y, CARD_W, CARD_H, 18);
     ctx.fillStyle = "#ffffff";
     ctx.fill();
     ctx.save();
-    roundRect(ctx, x, y, w, h, 20);
+    roundRect(ctx, x, y, CARD_W, CARD_H, 18);
     ctx.clip();
 
-    const swatchH = Math.round(h * swatchRatio);
     ctx.fillStyle = `rgb(${entry.rgb.r}, ${entry.rgb.g}, ${entry.rgb.b})`;
-    ctx.fillRect(x, y, w, swatchH);
+    ctx.fillRect(x, y, CARD_W, SWATCH_H);
 
-    // Role label, sitting on the swatch itself (contrast-checked).
     const onSwatch = bestTextColor(entry.rgb);
-    capsText(ctx, entry.label, x + 28, y + swatchH - 22, { size: 22, weight: 700, color: onSwatch, spacing: 0.08 });
+    capsText(ctx, entry.label, x + 20, y + SWATCH_H - 18, { size: 17, weight: 700, color: onSwatch, spacing: 0.06 });
 
     ctx.restore();
     ctx.strokeStyle = BORDER;
     ctx.lineWidth = 1;
-    roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 20);
+    roundRect(ctx, x + 0.5, y + 0.5, CARD_W - 1, CARD_H - 1, 18);
     ctx.stroke();
 
-    let ty = y + swatchH + 40;
-    const tx = x + 28;
-    capsText(ctx, entry.name || "", tx, ty, { size: 24, weight: 700, color: FG, spacing: 0.02 });
-    ty += 30;
-    capsText(ctx, `#${entry.hex}`, tx, ty, { size: 17, weight: 500, color: ACCENT, spacing: 0.05 });
-    ty += 26;
-    capsText(ctx, `RGB ${entry.rgb.r} ${entry.rgb.g} ${entry.rgb.b}`, tx, ty, { size: 14, weight: 500, color: MUTED, spacing: 0.05 });
+    let ty = y + SWATCH_H + 30;
+    const tx = x + 20;
+    capsText(ctx, entry.name || "", tx, ty, { size: 18, weight: 700, color: FG, spacing: 0.02 });
+    ty += 25;
+    capsText(ctx, `#${entry.hex}`, tx, ty, { size: 13, weight: 600, color: ACCENT, spacing: 0.04 });
     ty += 20;
-    capsText(ctx, `CMYK ${entry.cmyk.c} ${entry.cmyk.m} ${entry.cmyk.y} ${entry.cmyk.k}`, tx, ty, { size: 14, weight: 500, color: MUTED, spacing: 0.05 });
-    ty += 20;
-    capsText(ctx, `HSL ${Math.round(entry.hsl.h)} ${Math.round(entry.hsl.s)}% ${Math.round(entry.hsl.l)}%`, tx, ty, { size: 14, weight: 500, color: MUTED, spacing: 0.05 });
+    capsText(ctx, `RGB ${entry.rgb.r} ${entry.rgb.g} ${entry.rgb.b}`, tx, ty, { size: 12, weight: 500, color: MUTED, spacing: 0.03 });
+    ty += 18;
+    capsText(ctx, `CMYK ${entry.cmyk.c} ${entry.cmyk.m} ${entry.cmyk.y} ${entry.cmyk.k}`, tx, ty, { size: 12, weight: 500, color: MUTED, spacing: 0.03 });
+    ty += 18;
+    capsText(ctx, `HSL ${Math.round(entry.hsl.h)} ${Math.round(entry.hsl.s)}% ${Math.round(entry.hsl.l)}%`, tx, ty, { size: 12, weight: 500, color: MUTED, spacing: 0.03 });
+    ty += 22;
+    capsText(ctx, `Text: white ${entry.contrastWhite.tier} · black ${entry.contrastBlack.tier}`, tx, ty, { size: 10.5, weight: 500, color: MUTED, spacing: 0.01 });
   }
 
-  function layoutRows(count) {
-    // First entry (base) is drawn separately/full-width; this lays out the rest.
-    if (count <= 0) return [];
-    const cols = count <= 3 ? count : 2;
-    const rows = [];
-    for (let i = 0; i < count; i += cols) rows.push(Math.min(cols, count - i));
-    return rows;
-  }
-
-  function render(colors, meta) {
-    const base = colors[0];
-    const rest = colors.slice(1);
-    const rowCounts = layoutRows(rest.length);
-
-    const contentW = W - PAD * 2;
-    const baseCardH = 300;
-    const gap = 24;
-    const secondaryCardH = 300;
-    const rowsH = rowCounts.reduce((sum) => sum + secondaryCardH + gap, 0);
-
-    const headerH = 150;
-    const footerH = 70;
-    const H = headerH + baseCardH + gap + rowsH + footerH + PAD;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = W * SCALE;
-    canvas.height = H * SCALE;
-    const ctx = canvas.getContext("2d");
-    ctx.scale(SCALE, SCALE);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, W, H);
-
-    // Header
-    capsText(ctx, "Color Pairings", PAD, PAD + 26, { size: 30, weight: 700, color: FG, spacing: 0.03 });
-    capsText(ctx, meta.harmonyLabel, PAD, PAD + 58, { size: 15, weight: 600, color: ACCENT, spacing: 0.14 });
-    capsText(ctx, `#${base.hex}`, W - PAD, PAD + 26, { size: 30, weight: 700, color: FG, spacing: 0.02, align: "right" });
-    capsText(ctx, base.name || "", W - PAD, PAD + 58, { size: 15, weight: 600, color: MUTED, spacing: 0.1, align: "right" });
-
-    let cy = headerH;
-
-    // Featured base card: full width, swatch on the left, details on the right.
-    roundRect(ctx, PAD, cy, contentW, baseCardH, 20);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.save();
-    roundRect(ctx, PAD, cy, contentW, baseCardH, 20);
-    ctx.clip();
-    const swW = baseCardH;
-    ctx.fillStyle = `rgb(${base.rgb.r}, ${base.rgb.g}, ${base.rgb.b})`;
-    ctx.fillRect(PAD, cy, swW, baseCardH);
-    const onBase = bestTextColor(base.rgb);
-    capsText(ctx, "Base", PAD + 26, cy + baseCardH - 26, { size: 26, weight: 700, color: onBase, spacing: 0.08 });
-    ctx.restore();
-    ctx.strokeStyle = BORDER;
-    roundRect(ctx, PAD + 0.5, cy + 0.5, contentW - 1, baseCardH - 1, 20);
-    ctx.stroke();
-
-    const detailX = PAD + swW + 40;
-    let dy = cy + 56;
-    capsText(ctx, base.name || "", detailX, dy, { size: 30, weight: 700, color: FG, spacing: 0.02 });
-    dy += 40;
-    capsText(ctx, `HEX #${base.hex}`, detailX, dy, { size: 18, weight: 600, color: ACCENT, spacing: 0.05 });
-    dy += 32;
-    capsText(ctx, `RGB ${base.rgb.r}, ${base.rgb.g}, ${base.rgb.b}`, detailX, dy, { size: 16, weight: 500, color: FG, spacing: 0.03 });
-    dy += 26;
-    capsText(ctx, `CMYK ${base.cmyk.c}, ${base.cmyk.m}, ${base.cmyk.y}, ${base.cmyk.k}`, detailX, dy, { size: 16, weight: 500, color: FG, spacing: 0.03 });
-    dy += 26;
-    capsText(ctx, `HSL ${Math.round(base.hsl.h)}, ${Math.round(base.hsl.s)}%, ${Math.round(base.hsl.l)}%`, detailX, dy, { size: 16, weight: 500, color: FG, spacing: 0.03 });
-    dy += 32;
-    capsText(
-      ctx,
-      `Contrast — white text ${base.contrastWhite.ratio.toFixed(2)} (${base.contrastWhite.tier}) · black text ${base.contrastBlack.ratio.toFixed(2)} (${base.contrastBlack.tier})`,
-      detailX,
-      dy,
-      { size: 13, weight: 500, color: MUTED, spacing: 0.02 }
-    );
-
-    cy += baseCardH + gap;
-
-    // Secondary cards
-    let idx = 0;
-    for (const cols of rowCounts) {
-      const cardW = (contentW - gap * (cols - 1)) / cols;
-      for (let c = 0; c < cols; c++) {
-        const entry = rest[idx++];
-        const x = PAD + c * (cardW + gap);
-        drawCard(ctx, entry, x, cy, cardW, secondaryCardH);
-      }
-      cy += secondaryCardH + gap;
+  /** Lays out `entries` as a fixed-size, centered-per-row grid. Returns height consumed. */
+  function layoutGrid(ctx, entries, x0, y0, contentW) {
+    let cy = y0;
+    for (let i = 0; i < entries.length; i += MAX_COLS) {
+      const row = entries.slice(i, i + MAX_COLS);
+      const rowW = row.length * CARD_W + (row.length - 1) * GAP;
+      let cx = x0 + (contentW - rowW) / 2;
+      row.forEach((entry) => {
+        drawCard(ctx, entry, cx, cy);
+        cx += CARD_W + GAP;
+      });
+      cy += CARD_H + GAP;
     }
+    return cy - y0 - (entries.length ? GAP : 0);
+  }
 
-    // Footer credit — matches the app's ".landing__credit" typographic treatment.
-    capsText(ctx, "Made with COLOR by AHFOS · ahfos.github.io/color", PAD, H - PAD / 2 - 6, {
-      size: 12,
+  function measureGridHeight(count) {
+    if (count <= 0) return 0;
+    const rows = Math.ceil(count / MAX_COLS);
+    return rows * (CARD_H + GAP) - GAP;
+  }
+
+  function drawHeader(ctx, base, harmonyLabel) {
+    capsText(ctx, "Color Pairings", PAD, PAD + 26, { size: 28, weight: 700, color: FG, spacing: 0.03 });
+    capsText(ctx, harmonyLabel, PAD, PAD + 56, { size: 14, weight: 600, color: ACCENT, spacing: 0.14 });
+    capsText(ctx, `#${base.hex}`, W - PAD, PAD + 26, { size: 28, weight: 700, color: FG, spacing: 0.02, align: "right" });
+    capsText(ctx, base.name || "", W - PAD, PAD + 56, { size: 14, weight: 600, color: MUTED, spacing: 0.1, align: "right" });
+  }
+
+  /**
+   * Bottom brand strip: a rule across the full width, "AN AHFOS INITIATIVE"
+   * bottom-left in the same treatment as the landing page's credit line,
+   * and the COLOR logo bottom-right.
+   */
+  function drawFooter(ctx, H, logoImg) {
+    const footerY = H - 66;
+    ctx.strokeStyle = BORDER;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD, footerY);
+    ctx.lineTo(W - PAD, footerY);
+    ctx.stroke();
+
+    capsText(ctx, "An AHFOS Initiative", PAD, footerY + 36, {
+      size: 13,
       weight: 500,
       color: MUTED,
-      spacing: 0.18,
+      spacing: 0.24,
     });
 
-    return canvas;
+    if (logoImg) {
+      const logoH = 26;
+      const logoW = logoH * (logoImg.width / logoImg.height);
+      ctx.drawImage(logoImg, W - PAD - logoW, footerY + 16, logoW, logoH);
+    }
   }
 
   function download(canvas, filename) {
@@ -207,12 +182,83 @@ const BentoExport = (() => {
     }, "image/png");
   }
 
-  function exportPNG(colors, meta) {
-    const canvas = render(colors, meta);
-    const hex = colors[0].hex.toLowerCase();
+  const HEADER_H = 130;
+  const FOOTER_H = 100;
+  const SECTION_GAP = 36;
+  const HEADING_H = 38;
+
+  /** Single harmony (or any flat list) — every entry uniform, base included. */
+  async function exportPNG(colors, meta) {
+    const base = colors[0];
+    const gridH = measureGridHeight(colors.length);
+    const H = HEADER_H + gridH + SECTION_GAP + FOOTER_H;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W * SCALE;
+    canvas.height = H * SCALE;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(SCALE, SCALE);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+
+    drawHeader(ctx, base, meta.harmonyLabel || "");
+    layoutGrid(ctx, colors, PAD, HEADER_H, CONTENT_W);
+
+    let logoImg = null;
+    try {
+      logoImg = await loadImage("assets/logo.svg");
+    } catch {
+      /* footer still renders without the mark */
+    }
+    drawFooter(ctx, H, logoImg);
+
+    const hex = base.hex.toLowerCase();
     const harmony = (meta.harmonyId || "palette").toLowerCase();
     download(canvas, `color-pairings-${hex}-${harmony}.png`);
   }
 
-  return { render, exportPNG };
+  /** "All" export: Base, then every harmony group under its own heading. */
+  async function exportAllPNG(base, groups) {
+    let H = HEADER_H;
+    H += measureGridHeight(1) + HEADING_H + SECTION_GAP; // Base section
+    groups.forEach((g) => {
+      H += HEADING_H + measureGridHeight(g.colors.length) + SECTION_GAP;
+    });
+    H += FOOTER_H;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W * SCALE;
+    canvas.height = H * SCALE;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(SCALE, SCALE);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+
+    drawHeader(ctx, base, "All Pairings");
+
+    let cy = HEADER_H;
+    capsText(ctx, "Base", PAD, cy + 24, { size: 15, weight: 700, color: ACCENT, spacing: 0.12 });
+    cy += HEADING_H;
+    cy += layoutGrid(ctx, [base], PAD, cy, CONTENT_W) + SECTION_GAP;
+
+    groups.forEach((g) => {
+      capsText(ctx, g.label, PAD, cy + 24, { size: 15, weight: 700, color: ACCENT, spacing: 0.12 });
+      cy += HEADING_H;
+      cy += layoutGrid(ctx, g.colors, PAD, cy, CONTENT_W) + SECTION_GAP;
+    });
+
+    let logoImg = null;
+    try {
+      logoImg = await loadImage("assets/logo.svg");
+    } catch {
+      /* footer still renders without the mark */
+    }
+    drawFooter(ctx, H, logoImg);
+
+    download(canvas, `color-pairings-${base.hex.toLowerCase()}-all.png`);
+  }
+
+  return { exportPNG, exportAllPNG };
 })();

@@ -2,8 +2,9 @@
  * pairings.js
  * "Color Pairings" — enter any hex/RGB, see it plotted on a hue/saturation
  * wheel alongside its complementary / analogous / triadic / split-comp /
- * tetradic / monochromatic matches, and read every format (hex, RGB, CMYK,
- * HSL) plus a nearest color name and WCAG text-contrast readout in a bento
+ * tetradic / monochromatic matches (or all of them at once via "All"), and
+ * read every format (hex, RGB, CMYK, HSL) plus a nearest color name, a
+ * WCAG text-contrast readout, and a pairwise contrast table in a bento
  * grid below — exportable as a PNG.
  *
  * Self-contained: owns its own view toggle (home <-> pairingsView) and
@@ -41,7 +42,10 @@
   const wheelRoot = root.querySelector("[data-pairings-wheel]");
   const wheelNote = root.querySelector("[data-pairings-wheel-note]");
   const bentoEl = document.getElementById("pairingsBento");
+  const historyEl = document.getElementById("pairingsHistory");
   const recentEl = document.getElementById("pairingsRecent");
+  const contrastSectionEl = document.getElementById("pairingsContrast");
+  const contrastListEl = document.getElementById("pairingsContrastList");
   const copyAllBtn = document.getElementById("pairingsCopyAllBtn");
   const shareLinkBtn = document.getElementById("pairingsShareLinkBtn");
   const exportBtn = document.getElementById("pairingsExportBtn");
@@ -50,7 +54,7 @@
   const sounds = typeof Sounds !== "undefined" ? Sounds : { unlock() {}, playGrab() {}, playRelease() {}, playCorrect() {} };
 
   const RECENT_KEY = "color-pairings-recent";
-  const RECENT_MAX = 10;
+  const RECENT_MAX = 6;
 
   const state = {
     rgb: { r: 51, g: 153, b: 255 },
@@ -66,7 +70,7 @@
     try {
       const raw = localStorage.getItem(RECENT_KEY);
       const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr.filter((h) => ColorEngine.isValidHex(h)) : [];
+      return Array.isArray(arr) ? arr.filter((h) => ColorEngine.isValidHex(h)).slice(0, RECENT_MAX) : [];
     } catch {
       return [];
     }
@@ -76,7 +80,7 @@
     try {
       localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX)));
     } catch {
-      /* private browsing / storage disabled — recents just won't persist */
+      /* private browsing / storage disabled — history just won't persist */
     }
   }
 
@@ -88,10 +92,10 @@
   }
 
   function renderRecent() {
-    if (!recentEl) return;
+    if (!recentEl || !historyEl) return;
     const list = loadRecent();
     recentEl.innerHTML = "";
-    recentEl.hidden = list.length === 0;
+    historyEl.hidden = list.length === 0;
     list.forEach((hex) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -108,6 +112,10 @@
   }
 
   // ---------- url share state ----------
+
+  function isValidHarmonyId(id) {
+    return id === "all" || ColorEngine.HARMONY_TYPES.some((t) => t.id === id);
+  }
 
   function syncUrl() {
     try {
@@ -127,7 +135,7 @@
       const c = params.get("c");
       const h = params.get("h");
       const rgb = c && ColorEngine.isValidHex(c) ? ColorEngine.hexToRgb(c) : null;
-      const harmony = h && ColorEngine.HARMONY_TYPES.some((t) => t.id === h) ? h : null;
+      const harmony = h && isValidHarmonyId(h) ? h : null;
       return { rgb, harmony, present: !!(rgb || harmony) };
     } catch {
       return { rgb: null, harmony: null, present: false };
@@ -171,7 +179,11 @@
     setBase(rgb, { syncInputs: false });
   }
 
-  // ---------- core render ----------
+  // ---------- color math / enrichment ----------
+
+  function withTier(ratio) {
+    return { ratio, tier: ColorEngine.contrastTier(ratio) };
+  }
 
   function enrich(entry, baseHsv) {
     const { label, rgb } = entry;
@@ -192,31 +204,51 @@
     };
   }
 
-  function withTier(ratio) {
-    return { ratio, tier: ColorEngine.contrastTier(ratio) };
-  }
-
   function currentColors() {
     const baseHsv = state.harmony === "monochromatic" ? ColorEngine.rgbToHsv(state.rgb) : null;
     return ColorEngine.getHarmony(state.rgb, state.harmony).map((entry) => enrich(entry, baseHsv));
   }
 
+  /** Every harmony type computed at once, grouped, for the "All" tab. */
+  function computeAllGroups() {
+    const base = enrich({ label: "Base", rgb: state.rgb }, null);
+    const groups = ColorEngine.HARMONY_TYPES.map((t) => {
+      const baseHsv = t.id === "monochromatic" ? ColorEngine.rgbToHsv(state.rgb) : null;
+      const entries = ColorEngine.getHarmony(state.rgb, t.id).slice(1); // drop the repeated Base
+      return { id: t.id, label: t.label, colors: entries.map((e) => enrich(e, baseHsv)) };
+    });
+    return { base, groups };
+  }
+
+  function formatLine(label, c) {
+    return `${label}: #${c.hex} | RGB ${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b} | CMYK ${c.cmyk.c}, ${c.cmyk.m}, ${c.cmyk.y}, ${c.cmyk.k} | HSL ${Math.round(c.hsl.h)}, ${Math.round(c.hsl.s)}%, ${Math.round(c.hsl.l)}%`;
+  }
+
+  // ---------- render: wheel + bento + contrast ----------
+
   function render() {
+    if (state.harmony === "all") {
+      const { base, groups } = computeAllGroups();
+      const wheelColors = [{ id: "base", rgb: base.rgb, label: "Base" }];
+      groups.forEach((g) => {
+        g.colors.forEach((c, i) => {
+          wheelColors.push({ id: `${g.id}-${i}`, rgb: c.rgb, label: `${g.label}: ${c.label}`, hue: c.hue, sat: c.sat });
+        });
+      });
+      wheelController.setColors(wheelColors);
+      if (wheelNote) wheelNote.hidden = false;
+      renderBentoAll(base, groups);
+      renderContrast([base, ...groups.map((g) => g.colors[0])]);
+      return;
+    }
+
     const colors = currentColors();
-
     wheelController.setColors(
-      colors.map((c, idx) => ({
-        id: `c${idx}`,
-        rgb: c.rgb,
-        label: `${c.label} · #${c.hex}`,
-        hue: c.hue,
-        sat: c.sat,
-      }))
+      colors.map((c, idx) => ({ id: `c${idx}`, rgb: c.rgb, label: `${c.label} · #${c.hex}`, hue: c.hue, sat: c.sat }))
     );
-
     if (wheelNote) wheelNote.hidden = state.harmony !== "monochromatic";
-
     renderBento(colors);
+    renderContrast(colors);
   }
 
   function copyRow(text, label) {
@@ -229,58 +261,10 @@
     sounds.playGrab();
   }
 
-  function renderBento(colors) {
-    bentoEl.innerHTML = "";
-    colors.forEach((c, idx) => {
-      const card = document.createElement("article");
-      card.className = "pairing-card" + (idx === 0 ? " pairing-card--base" : "");
-
-      const swatch = document.createElement("button");
-      swatch.type = "button";
-      swatch.className = "pairing-card__swatch";
-      swatch.style.background = `rgb(${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b})`;
-      swatch.setAttribute("aria-label", `Copy hex ${c.hex}`);
-      const swatchLabel = document.createElement("span");
-      swatchLabel.className = "pairing-card__swatch-label";
-      swatchLabel.textContent = c.label;
-      swatchLabel.style.color = bestTextColor(c.rgb);
-      swatch.appendChild(swatchLabel);
-      swatch.addEventListener("click", () => copyRow(`#${c.hex}`, `#${c.hex}`));
-      card.appendChild(swatch);
-
-      const body = document.createElement("div");
-      body.className = "pairing-card__body";
-
-      const name = document.createElement("h3");
-      name.className = "pairing-card__name";
-      name.textContent = c.name;
-      body.appendChild(name);
-
-      const rows = [
-        [`#${c.hex}`, `#${c.hex}`],
-        [`RGB ${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b}`, `${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b}`],
-        [`CMYK ${c.cmyk.c}, ${c.cmyk.m}, ${c.cmyk.y}, ${c.cmyk.k}`, `${c.cmyk.c}, ${c.cmyk.m}, ${c.cmyk.y}, ${c.cmyk.k}`],
-        [`HSL ${Math.round(c.hsl.h)}, ${Math.round(c.hsl.s)}%, ${Math.round(c.hsl.l)}%`, `${Math.round(c.hsl.h)}, ${Math.round(c.hsl.s)}%, ${Math.round(c.hsl.l)}%`],
-      ];
-      rows.forEach(([display, copyValue]) => {
-        const row = document.createElement("button");
-        row.type = "button";
-        row.className = "pairing-code-row";
-        row.textContent = display;
-        row.addEventListener("click", () => copyRow(copyValue, display));
-        body.appendChild(row);
-      });
-
-      const contrast = document.createElement("div");
-      contrast.className = "pairing-card__contrast";
-      contrast.innerHTML =
-        `<span class="pairing-badge pairing-badge--${badgeTone(c.contrastWhite.tier)}">White text ${c.contrastWhite.tier}</span>` +
-        `<span class="pairing-badge pairing-badge--${badgeTone(c.contrastBlack.tier)}">Black text ${c.contrastBlack.tier}</span>`;
-      body.appendChild(contrast);
-
-      card.appendChild(body);
-      bentoEl.appendChild(card);
-    });
+  function bestTextColor(rgb) {
+    const white = { r: 255, g: 255, b: 255 };
+    const black = { r: 0, g: 0, b: 0 };
+    return ColorEngine.contrastRatio(rgb, white) >= ColorEngine.contrastRatio(rgb, black) ? "#ffffff" : "#000000";
   }
 
   function badgeTone(tier) {
@@ -289,10 +273,146 @@
     return "fail";
   }
 
-  function bestTextColor(rgb) {
-    const white = { r: 255, g: 255, b: 255 };
-    const black = { r: 0, g: 0, b: 0 };
-    return ColorEngine.contrastRatio(rgb, white) >= ColorEngine.contrastRatio(rgb, black) ? "#ffffff" : "#000000";
+  function buildCard(c, isBase) {
+    const card = document.createElement("article");
+    card.className = "pairing-card" + (isBase ? " pairing-card--base" : "");
+
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.className = "pairing-card__swatch";
+    swatch.style.background = `rgb(${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b})`;
+    swatch.setAttribute("aria-label", `Copy hex ${c.hex}`);
+    const swatchLabel = document.createElement("span");
+    swatchLabel.className = "pairing-card__swatch-label";
+    swatchLabel.textContent = c.label;
+    swatchLabel.style.color = bestTextColor(c.rgb);
+    swatch.appendChild(swatchLabel);
+    swatch.addEventListener("click", () => copyRow(`#${c.hex}`, `#${c.hex}`));
+    card.appendChild(swatch);
+
+    const body = document.createElement("div");
+    body.className = "pairing-card__body";
+
+    const name = document.createElement("h3");
+    name.className = "pairing-card__name";
+    name.textContent = c.name;
+    body.appendChild(name);
+
+    const rows = [
+      [`#${c.hex}`, `#${c.hex}`],
+      [`RGB ${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b}`, `${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b}`],
+      [`CMYK ${c.cmyk.c}, ${c.cmyk.m}, ${c.cmyk.y}, ${c.cmyk.k}`, `${c.cmyk.c}, ${c.cmyk.m}, ${c.cmyk.y}, ${c.cmyk.k}`],
+      [`HSL ${Math.round(c.hsl.h)}, ${Math.round(c.hsl.s)}%, ${Math.round(c.hsl.l)}%`, `${Math.round(c.hsl.h)}, ${Math.round(c.hsl.s)}%, ${Math.round(c.hsl.l)}%`],
+    ];
+    rows.forEach(([display, copyValue]) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "pairing-code-row";
+      row.textContent = display;
+      row.addEventListener("click", () => copyRow(copyValue, display));
+      body.appendChild(row);
+    });
+
+    const contrast = document.createElement("div");
+    contrast.className = "pairing-card__contrast";
+    contrast.innerHTML =
+      `<span class="pairing-badge pairing-badge--${badgeTone(c.contrastWhite.tier)}">White text ${c.contrastWhite.tier}</span>` +
+      `<span class="pairing-badge pairing-badge--${badgeTone(c.contrastBlack.tier)}">Black text ${c.contrastBlack.tier}</span>`;
+    body.appendChild(contrast);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderBento(colors) {
+    bentoEl.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.className = "bento";
+    colors.forEach((c, idx) => grid.appendChild(buildCard(c, idx === 0)));
+    bentoEl.appendChild(grid);
+  }
+
+  function renderBentoAll(base, groups) {
+    bentoEl.innerHTML = "";
+
+    const baseSection = document.createElement("div");
+    baseSection.className = "bento-group";
+    const baseHeading = document.createElement("h3");
+    baseHeading.className = "bento-group__heading";
+    baseHeading.textContent = "Base";
+    const baseGrid = document.createElement("div");
+    baseGrid.className = "bento";
+    baseGrid.appendChild(buildCard(base, true));
+    baseSection.append(baseHeading, baseGrid);
+    bentoEl.appendChild(baseSection);
+
+    groups.forEach((g) => {
+      const section = document.createElement("div");
+      section.className = "bento-group";
+      const heading = document.createElement("h3");
+      heading.className = "bento-group__heading";
+      heading.textContent = g.label;
+      const grid = document.createElement("div");
+      grid.className = "bento";
+      g.colors.forEach((c) => grid.appendChild(buildCard(c, false)));
+      section.append(heading, grid);
+      bentoEl.appendChild(section);
+    });
+  }
+
+  /** Every possible pairwise contrast combination among the given colors. */
+  function buildContrastPairs(colors) {
+    const pairs = [];
+    for (let i = 0; i < colors.length; i++) {
+      for (let j = i + 1; j < colors.length; j++) {
+        const a = colors[i];
+        const b = colors[j];
+        const ratio = ColorEngine.contrastRatio(a.rgb, b.rgb);
+        pairs.push({ a, b, ratio, tier: ColorEngine.contrastTier(ratio) });
+      }
+    }
+    pairs.sort((x, y) => y.ratio - x.ratio);
+    return pairs;
+  }
+
+  function renderContrast(colors) {
+    if (!contrastListEl || !contrastSectionEl) return;
+    const pairs = buildContrastPairs(colors);
+    contrastListEl.innerHTML = "";
+    pairs.forEach((p) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "pairings-contrast__row";
+
+      const swatches = document.createElement("span");
+      swatches.className = "pairings-contrast__swatches";
+      const chipA = document.createElement("span");
+      chipA.className = "pairings-contrast__chip";
+      chipA.style.background = `rgb(${p.a.rgb.r}, ${p.a.rgb.g}, ${p.a.rgb.b})`;
+      const chipB = document.createElement("span");
+      chipB.className = "pairings-contrast__chip";
+      chipB.style.background = `rgb(${p.b.rgb.r}, ${p.b.rgb.g}, ${p.b.rgb.b})`;
+      swatches.append(chipA, chipB);
+
+      const label = document.createElement("span");
+      label.className = "pairings-contrast__label";
+      label.textContent = `${p.a.label} × ${p.b.label}`;
+
+      const ratio = document.createElement("span");
+      ratio.className = "pairings-contrast__ratio";
+      ratio.textContent = `${p.ratio.toFixed(2)}:1`;
+
+      const badge = document.createElement("span");
+      badge.className = `pairing-badge pairing-badge--${badgeTone(p.tier)}`;
+      badge.textContent = p.tier;
+
+      row.append(swatches, label, ratio, badge);
+      row.addEventListener("click", () =>
+        copyRow(`#${p.a.hex} on #${p.b.hex} — ${p.ratio.toFixed(2)}:1 (${p.tier})`, "contrast pair")
+      );
+      contrastListEl.appendChild(row);
+    });
+    contrastSectionEl.hidden = pairs.length === 0;
   }
 
   function showFeedback(text) {
@@ -309,7 +429,7 @@
 
   // ---------- public state mutation ----------
 
-  function setBase(rgb, { syncInputs = true, pushToRecent = true, animate = true } = {}) {
+  function setBase(rgb, { syncInputs = true, pushToRecent = true } = {}) {
     state.rgb = rgb;
     if (syncInputs) syncInputsFromRGB(rgb);
     applyLiveOutline(rgb);
@@ -367,10 +487,17 @@
   });
 
   copyAllBtn.addEventListener("click", () => {
-    const colors = currentColors();
-    const text = colors
-      .map((c) => `${c.label}: #${c.hex} | RGB ${c.rgb.r}, ${c.rgb.g}, ${c.rgb.b} | CMYK ${c.cmyk.c}, ${c.cmyk.m}, ${c.cmyk.y}, ${c.cmyk.k} | HSL ${Math.round(c.hsl.h)}, ${Math.round(c.hsl.s)}%, ${Math.round(c.hsl.l)}%`)
-      .join("\n");
+    let text;
+    if (state.harmony === "all") {
+      const { base, groups } = computeAllGroups();
+      const lines = [formatLine("Base", base)];
+      groups.forEach((g) => g.colors.forEach((c) => lines.push(formatLine(`${g.label} — ${c.label}`, c))));
+      text = lines.join("\n");
+    } else {
+      text = currentColors()
+        .map((c) => formatLine(c.label, c))
+        .join("\n");
+    }
     copyRow(text, "all colors");
   });
 
@@ -379,13 +506,28 @@
     copyRow(location.href, "link");
   });
 
-  exportBtn.addEventListener("click", () => {
+  exportBtn.addEventListener("click", async () => {
     sounds.unlock();
-    const colors = currentColors();
-    const harmonyMeta = ColorEngine.HARMONY_TYPES.find((t) => t.id === state.harmony);
-    BentoExport.exportPNG(colors, { harmonyId: state.harmony, harmonyLabel: harmonyMeta ? harmonyMeta.label : state.harmony });
-    sounds.playCorrect();
-    showFeedback("Exported PNG");
+    exportBtn.disabled = true;
+    try {
+      if (state.harmony === "all") {
+        const { base, groups } = computeAllGroups();
+        await BentoExport.exportAllPNG(base, groups);
+      } else {
+        const colors = currentColors();
+        const harmonyMeta = ColorEngine.HARMONY_TYPES.find((t) => t.id === state.harmony);
+        await BentoExport.exportPNG(colors, {
+          harmonyId: state.harmony,
+          harmonyLabel: harmonyMeta ? harmonyMeta.label : state.harmony,
+        });
+      }
+      sounds.playCorrect();
+      showFeedback("Exported PNG");
+    } catch {
+      showFeedback("Couldn't export — try again");
+    } finally {
+      exportBtn.disabled = false;
+    }
   });
 
   function enter(initial) {

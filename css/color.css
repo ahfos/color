@@ -449,7 +449,7 @@
   color: #888888;
 }
 
-.landing__divider::before,
+/* A single rule trailing the label — not a line on both sides. */
 .landing__divider::after {
   content: "";
   flex: 1;
@@ -690,6 +690,11 @@
   width: 100%;
 }
 
+.pairings-random-btn {
+  align-self: center;
+  margin-top: -0.25rem;
+}
+
 /* ---- pairings: harmony tabs ---- */
 
 .pairings-harmony-tabs {
@@ -803,7 +808,23 @@
   max-width: 24rem;
 }
 
-/* ---- pairings: recent colors ---- */
+/* ---- pairings: history (recent colors) ---- */
+
+.pairings-history {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.pairings-history__title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
 .pairings-recent {
   display: flex;
@@ -830,11 +851,41 @@
   transform: scale(0.95);
 }
 
-/* ---- pairings: bento grid ---- */
+/* ---- pairings: bento grid ----
+ * Fixed-size (not stretch-to-fill) columns, so every tile is the same
+ * physical size everywhere — in the flat harmony view and across every
+ * group in the "All" view — instead of one big featured tile among small
+ * ones. Rows with fewer cards than a full row just leave space; nothing
+ * stretches to compensate. */
+
+.pairings-bento {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.bento-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+}
+
+.bento-group__heading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  align-self: flex-start;
+}
 
 .bento {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, 9rem);
+  justify-content: center;
   gap: 0.9rem;
   width: 100%;
 }
@@ -853,11 +904,17 @@
   box-shadow: 0 14px 32px -20px rgba(0, 0, 0, 0.35);
 }
 
+/* Base is marked with an accent ring, never a different size. */
+.pairing-card--base {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
 .pairing-card__swatch {
   display: flex;
   align-items: flex-end;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 1 / 1;
   border: none;
   padding: 0;
   transition: filter var(--transition-fast);
@@ -867,15 +924,11 @@
   filter: brightness(1.03);
 }
 
-.pairing-card--base .pairing-card__swatch {
-  aspect-ratio: 4 / 3;
-}
-
 .pairing-card__swatch-label {
-  padding: 0.6rem 0.75rem;
-  font-size: 0.68rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -883,33 +936,34 @@
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  padding: 0.9rem 1rem 1rem;
+  padding: 0.7rem 0.7rem 0.8rem;
 }
 
 .pairing-card__name {
   font-family: var(--ui-font);
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--fg);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .pairing-code-row {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.3rem 0.35rem;
-  margin: 0 -0.35rem;
+  padding: 0.22rem 0.3rem;
+  margin: 0 -0.3rem;
   border-radius: var(--radius-sm);
   font-family: var(--ui-font);
-  font-size: 0.76rem;
+  font-size: 0.63rem;
   font-weight: 500;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--fg);
   transition: background var(--transition-fast);
+  overflow-wrap: break-word;
 }
 
 .pairing-code-row:hover {
@@ -922,17 +976,17 @@
 
 .pairing-card__contrast {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.3rem;
   flex-wrap: wrap;
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }
 
 .pairing-badge {
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  padding: 0.25rem 0.5rem;
+  padding: 0.22rem 0.4rem;
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--muted);
@@ -955,6 +1009,77 @@
   color: var(--accent);
   border-color: rgba(196, 30, 36, 0.35);
   background: rgba(196, 30, 36, 0.08);
+}
+
+/* ---- pairings: contrast section (all pairwise combinations) ---- */
+
+.pairings-contrast {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.pairings-contrast__title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pairings-contrast__list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pairings-contrast__row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.15rem;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.pairings-contrast__row:hover {
+  background: var(--border-subtle);
+}
+
+.pairings-contrast__swatches {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.pairings-contrast__chip {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px var(--border);
+  margin-left: -0.5rem;
+}
+
+.pairings-contrast__chip:first-child {
+  margin-left: 0;
+}
+
+.pairings-contrast__label {
+  flex: 1;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.pairings-contrast__ratio {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .pairings-actions {
@@ -987,16 +1112,7 @@
   }
 
   .bento {
-    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  }
-
-  .pairing-card--base {
-    grid-column: span 2;
-    grid-row: span 2;
-  }
-
-  .pairing-card--base .pairing-card__name {
-    font-size: 1.15rem;
+    grid-template-columns: repeat(auto-fill, 10rem);
   }
 }
 
@@ -1042,12 +1158,12 @@
   }
 
   .bento {
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    grid-template-columns: repeat(auto-fill, 11rem);
     gap: 1.1rem;
   }
 
   .pairing-card__name {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 }
 
